@@ -59,7 +59,7 @@ def read_pdf_files(project_conf: ProjetFileData, project_data: ProjectData) -> C
     """
 
     croma_db_client = PersistentClient(path=CROMA_DB_PATH)
-    collection_names = [col.name for col in croma_db_client.list_collections()]
+    collection_names = croma_db_client.list_collections()
 
     if project_conf.project_name + "_call" in collection_names:
         call_textdb = Chroma(collection_name=project_conf.project_name + "_call",

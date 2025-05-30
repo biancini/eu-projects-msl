@@ -50,7 +50,6 @@ Sources:
 – Grant Agreement, p. N
 If the answer is not found in the documents, respond:
 Answer: The information requested is not available in the provided context.
-Sources: None
 """
 
 prompt = ChatPromptTemplate.from_template(TEMPLATE)

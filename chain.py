@@ -3,7 +3,6 @@
 import os
 
 from dotenv import load_dotenv
-from langchain import hub
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
@@ -32,7 +31,7 @@ docs_proposal = vectorstore_proposal.invoke(QUESTION)
 docs_ga = vectorstore_ga.invoke(QUESTION)
 
 TEMPLATE = """You are a helpful assistant with access to the following context information:
-. Call Text: {context_call}
+- Call Text: {context_call}
 - Project Proposal: {context_proposal}
 - Grant Agreement: {context_ga}
 - Project Data: {context_project_data}
@@ -55,7 +54,6 @@ Answer: The information requested is not available in the provided context.
 
 prompt = ChatPromptTemplate.from_template(TEMPLATE)
 llm = ChatOpenAI(model_name=os.getenv('MODEL'), temperature=0)
-prompt_hub_rag = hub.pull("rlm/rag-prompt")
 
 context_project_data = {
     "project_name": project_data.project_name,

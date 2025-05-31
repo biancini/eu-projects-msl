@@ -4,8 +4,8 @@ import logging
 
 import matplotlib.pyplot as plt
 
-from models import ProjetFileData
-from euprojects import read_pdf_pages
+from datamodels import ProjetFileData
+from readpdfs import read_pdf_pages
 
 logging.getLogger("pdfminer").setLevel(logging.ERROR)
 

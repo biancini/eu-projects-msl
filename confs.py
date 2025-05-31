@@ -1,6 +1,6 @@
 """Configuration settings and project data for EU projects."""
 
-from models import ProjetFileData
+from datamodels import ProjetFileData
 
 BASEPATH = (
     "/Users/andrea.biancinigmail.com/Library/CloudStorage/OneDrive-Personale/"

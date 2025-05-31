@@ -11,7 +11,7 @@ from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-from models import ProjectData
+from datamodels import ProjectData
 from confs import ProjetFileData
 
 logging.getLogger("pdfminer").setLevel(logging.ERROR)

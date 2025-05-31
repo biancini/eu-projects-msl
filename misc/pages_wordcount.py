@@ -1,8 +1,13 @@
+"""Module for analyzing and visualizing word count distribution in EU project documents."""
+
+import logging
+
+import matplotlib.pyplot as plt
 
 from models import ProjetFileData
 from euprojects import read_pdf_pages
-import matplotlib.pyplot as plt
 
+logging.getLogger("pdfminer").setLevel(logging.ERROR)
 
 BASEPATH = (
     "/Users/andrea.biancinigmail.com/Library/CloudStorage/OneDrive-Personale/"

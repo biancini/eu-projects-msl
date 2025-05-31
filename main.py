@@ -5,8 +5,8 @@ import os
 
 from openai import OpenAI
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
 
+from models import ProjectExtraction
 from chain import run_rag
 
 load_dotenv()
@@ -21,17 +21,6 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
-
-
-class ProjectExtraction(BaseModel):
-    """Data model for extracting project-related information from user queries."""
-
-    question: str = Field(description="Question to be used as a query to the model")
-    project_name: str = Field(
-        description="Name of the project the user is asking about"
-    )
-
-    confidence_score: float = Field(description="Confidence score between 0 and 1")
 
 
 def project_name_extraction(user_input: str) -> ProjectExtraction:

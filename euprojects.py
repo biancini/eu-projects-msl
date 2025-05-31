@@ -16,6 +16,8 @@ from confs import ProjetFileData
 
 logging.getLogger("pdfminer").setLevel(logging.ERROR)
 
+logger = logging.getLogger(__name__)
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 CROMA_DB_PATH = "./chroma_db"
 
@@ -29,6 +31,7 @@ def read_pdf_pages(filename: str) -> list[str]:
     Returns:
         List of strings, where each string contains the text from one page
     """
+    logger.info("Reading PDF pages for file %s", filename)
     pages = []
 
     text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
@@ -44,6 +47,7 @@ def read_pdf_pages(filename: str) -> list[str]:
                 pages.append(f"Page number {page_num}: {split}")
             page_num += 1
 
+    logger.debug("Read %d pages", len(pages))
     return pages
 
 def get_chroma_db(project_data: ProjectData, collection_name: str, pdf_filename: str) -> Chroma:
@@ -58,24 +62,26 @@ def get_chroma_db(project_data: ProjectData, collection_name: str, pdf_filename:
         Chroma object
     """
 
+    logger.info("Getting Chroma DB client")
     croma_db_client = PersistentClient(path=CROMA_DB_PATH)
     collection_names = croma_db_client.list_collections()
 
     if collection_name in collection_names:
+        logger.info("Collection %s already exists", collection_name)
         return Chroma(collection_name,
                       persist_directory="./chroma_db",
                       embedding_function=OpenAIEmbeddings(),
         )
-    else:
-        project_data.call_text = read_pdf_pages(pdf_filename)
 
-        return Chroma.from_texts(collection_name=collection_name,
-                                 persist_directory="./chroma_db",
-                                 texts=project_data.call_text,
-                                 embedding=OpenAIEmbeddings(),
-        )
+    logger.info("Collection %s does not exist, creating it", collection_name)
+    project_data.call_text = read_pdf_pages(pdf_filename)
 
-    return None
+    logger.info("Creating Chroma collection %s", collection_name)
+    return Chroma.from_texts(collection_name=collection_name,
+                                persist_directory="./chroma_db",
+                                texts=project_data.call_text,
+                                embedding=OpenAIEmbeddings(),
+    )
 
 def read_pdf_files(project_conf: ProjetFileData, project_data: ProjectData) -> Chroma:
     """Read and process PDF files for a project, including call, proposal,
@@ -89,14 +95,19 @@ def read_pdf_files(project_conf: ProjetFileData, project_data: ProjectData) -> C
         Chroma object
     """
 
+    logger.info("Reading PDF files for project %s", project_conf.project_name)
+
+    logger.info("Reading call file for project %s", project_conf.project_name)
     call_textdb = get_chroma_db(project_data,
                                 project_conf.project_name + "_call",
                                 project_conf.base_path + project_conf.call_file)
-    
+
+    logger.info("Reading proposal file for project %s", project_conf.project_name)
     proposal_textdb = get_chroma_db(project_data,
                                     project_conf.project_name + "_proposal",
                                     project_conf.base_path + project_conf.proposal_file)
 
+    logger.info("Reading grant agreement file for project %s", project_conf.project_name)
     ga_textdb = get_chroma_db(project_data,
                               project_conf.project_name + "_ga",
                               project_conf.base_path + project_conf.ga_file)

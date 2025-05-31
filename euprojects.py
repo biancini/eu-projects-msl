@@ -46,6 +46,37 @@ def read_pdf_pages(filename: str) -> list[str]:
 
     return pages
 
+def get_chroma_db(project_data: ProjectData, collection_name: str, pdf_filename: str) -> Chroma:
+    """Get a Chroma object for a given collection name.
+    
+    Args:
+        project_data: Project data object to store processed text
+        collection_name: Name of the collection
+        pdf_filename: Path to the PDF file
+        
+    Returns:
+        Chroma object
+    """
+
+    croma_db_client = PersistentClient(path=CROMA_DB_PATH)
+    collection_names = croma_db_client.list_collections()
+
+    if collection_name in collection_names:
+        return Chroma(collection_name,
+                      persist_directory="./chroma_db",
+                      embedding_function=OpenAIEmbeddings(),
+        )
+    else:
+        project_data.call_text = read_pdf_pages(pdf_filename)
+
+        return Chroma.from_texts(collection_name=collection_name,
+                                 persist_directory="./chroma_db",
+                                 texts=project_data.call_text,
+                                 embedding=OpenAIEmbeddings(),
+        )
+
+    return None
+
 def read_pdf_files(project_conf: ProjetFileData, project_data: ProjectData) -> Chroma:
     """Read and process PDF files for a project, including call, proposal,
     and grant agreement documents.
@@ -58,49 +89,16 @@ def read_pdf_files(project_conf: ProjetFileData, project_data: ProjectData) -> C
         Chroma object
     """
 
-    croma_db_client = PersistentClient(path=CROMA_DB_PATH)
-    collection_names = croma_db_client.list_collections()
+    call_textdb = get_chroma_db(project_data,
+                                project_conf.project_name + "_call",
+                                project_conf.base_path + project_conf.call_file)
+    
+    proposal_textdb = get_chroma_db(project_data,
+                                    project_conf.project_name + "_proposal",
+                                    project_conf.base_path + project_conf.proposal_file)
 
-    if project_conf.project_name + "_call" in collection_names:
-        call_textdb = Chroma(collection_name=project_conf.project_name + "_call",
-                             persist_directory="./chroma_db",
-                             embedding_function=OpenAIEmbeddings(),
-        )
-    else:
-        project_data.call_text=read_pdf_pages(project_conf.base_path + project_conf.call_file)
-
-        call_textdb = Chroma.from_texts(collection_name=project_conf.project_name + "_call",
-                                        persist_directory="./chroma_db",
-                                        texts=project_data.call_text,
-                                        embedding=OpenAIEmbeddings(),
-        )
-
-    if project_conf.project_name + "_proposal" in collection_names:
-        proposal_textdb = Chroma(collection_name=project_conf.project_name + "_proposal",
-                                 persist_directory="./chroma_db",
-                                 embedding_function=OpenAIEmbeddings(),
-        )
-    else:
-        project_data.proposal_text=read_pdf_pages(project_conf.base_path + project_conf.proposal_file)
-
-        proposal_textdb = Chroma.from_texts(collection_name=project_conf.project_name + "_proposal",
-                                            persist_directory="./chroma_db",
-                                            texts=project_data.proposal_text,
-                                            embedding=OpenAIEmbeddings(),
-        )
-
-    if project_conf.project_name + "_ga" in collection_names:
-        ga_textdb = Chroma(collection_name=project_conf.project_name + "_ga",
-                           persist_directory="./chroma_db",
-                           embedding_function=OpenAIEmbeddings(),
-        )
-    else:
-        project_data.ga_text=read_pdf_pages(project_conf.base_path + project_conf.ga_file)
-
-        ga_textdb = Chroma.from_texts(collection_name=project_conf.project_name + "_ga",
-                                      persist_directory="./chroma_db",
-                                      texts=project_data.ga_text,
-                                      embedding=OpenAIEmbeddings(),
-        )
+    ga_textdb = get_chroma_db(project_data,
+                              project_conf.project_name + "_ga",
+                              project_conf.base_path + project_conf.ga_file)
 
     return call_textdb.as_retriever(), proposal_textdb.as_retriever(), ga_textdb.as_retriever()

@@ -32,9 +32,10 @@ docs_proposal = vectorstore_proposal.invoke(QUESTION)
 docs_ga = vectorstore_ga.invoke(QUESTION)
 
 TEMPLATE = """You are a helpful assistant with access to the following context information:
-– Call Text: {context_call}
-– Project Proposal: {context_proposal}
-– Grant Agreement: {context_ga}
+. Call Text: {context_call}
+- Project Proposal: {context_proposal}
+- Grant Agreement: {context_ga}
+- Project Data: {context_project_data}
 Based on the information above, please answer the following question as accurately and thoroughly as possible.
 If the information is not available in the context, say so explicitly.
 Question: {question}
@@ -45,30 +46,28 @@ Format your response as follows:
 Answer:
 [Your detailed answer here]
 Sources:
-– Call Text, p. X
-– Proposal, p. Y-Z
-– Grant Agreement, p. N
+- Call Text, p. X
+- Proposal, p. Y-Z
+- Grant Agreement, p. N
 If the answer is not found in the documents, respond:
 Answer: The information requested is not available in the provided context.
 """
 
 prompt = ChatPromptTemplate.from_template(TEMPLATE)
 llm = ChatOpenAI(model_name=os.getenv('MODEL'), temperature=0)
-chain = prompt | llm
-chain.invoke({
-    "context_call": docs_call,
-    "context_proposal": docs_proposal,
-    "context_ga": docs_ga,
-    "question": QUESTION
-})
-
 prompt_hub_rag = hub.pull("rlm/rag-prompt")
+
+context_project_data = {
+    "project_name": project_data.project_name,
+    "start_date": project_data.start_date,
+}
 
 rag_chain = (
     {
         "context_call": vectorstore_call,
         "context_proposal": vectorstore_proposal,
         "context_ga": vectorstore_ga,
+        "context_project_data": lambda _: context_project_data,
         "question": RunnablePassthrough()
     }
     | prompt

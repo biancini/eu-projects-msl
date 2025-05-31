@@ -52,6 +52,10 @@ def run_rag(project_name: str, question: str) -> str:
     Please provide:
     A clear, plain-text answer (no markdown formatting).
     A list of all sources used, specifying the document name and page number(s) (e.g., "Proposal, p. 4"). If multiple documents are referenced, list them all.
+    At the end of the response, include a “Sources” section.
+    In this section, list only the unique page numbers referenced from the proposal.
+    Sort them in ascending order and group consecutive or nearby pages (within 2-3 pages apart) into ranges.
+    Use the format: Proposal, pp. 61, 68-70, 79.
 
     Format your response as follows:
     Answer:

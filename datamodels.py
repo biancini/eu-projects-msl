@@ -28,6 +28,3 @@ class ProjectData(BaseModel):
     """Data model representing a project's information and associated documents."""
     project_name: str = Field(description="Name of the project")
     start_date: str = Field(description="Start date of the project")
-    call_text: Optional[list[str]] = None
-    proposal_text: Optional[list[str]] = None
-    ga_text: Optional[list[str]] = None

@@ -5,3 +5,4 @@ langchain
 langchain-openai
 langchain-chroma
 open-webui
+termcolor

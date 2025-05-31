@@ -3,6 +3,8 @@
 import logging
 import os
 
+from termcolor import colored
+
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -78,6 +80,6 @@ def query_project(user_input: str) -> str:
 
 
 if __name__ == "__main__":
-    question = input("Enter the question you want to ask to the project:\n")
+    question = input(colored("Enter the question you want to ask to the project:\n", "green"))
     asnwer = query_project(question)
-    print(asnwer)
+    print(colored(asnwer, "green"))

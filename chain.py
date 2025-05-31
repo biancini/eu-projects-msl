@@ -37,14 +37,12 @@ def run_rag(project_name: str, question: str) -> str:
     logger.debug("Project data: %s", project_data)
 
     logger.info("Retrieve project documents from PDF files")
-    vectorstore_call, vectorstore_proposal, vectorstore_ga = read_pdf_files(project_conf, project_data)
+    vectorstore_project_docs = read_pdf_files(project_conf)
 
     logger.info("Build RAG chain")
     template = """You are a helpful assistant with access to the following context information:
     - Project Data: {context_project_data}
-    - Call Text: {context_call}
-    - Project Proposal: {context_proposal}
-    - Grant Agreement: {context_ga}
+    - Project Documents: {context_project_docs}
 
     Based on the information above, please answer the following question as accurately and thoroughly as possible.
     If the information is not available in the context, say so explicitly.
@@ -79,10 +77,8 @@ def run_rag(project_name: str, question: str) -> str:
 
     rag_chain = (
         {
-            "context_call": vectorstore_call,
-            "context_proposal": vectorstore_proposal,
-            "context_ga": vectorstore_ga,
             "context_project_data": lambda _: context_project_data,
+            "context_project_docs": vectorstore_project_docs,
             "question": RunnablePassthrough()
         }
         | prompt

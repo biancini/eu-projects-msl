@@ -110,9 +110,9 @@ def run_rag(project_name: str, question: str) -> str:
     Answer: 
     [Your detailed answer here]
     Sources:
-    - Call Text p. 9, 10, 12-15
-    - Proposal p. 10-14, 25, 32-34
-    - Grant Agreement p. 1, 18-23
+    - Call: p. 9, 10, 12-15
+    - Proposal: p. 10-14, 25, 32-34
+    - Grant Agreement: p. 1, 18-23
     """
 
     prompt = ChatPromptTemplate.from_template(template)

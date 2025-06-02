@@ -8,7 +8,7 @@ from termcolor import colored
 from openai import OpenAI
 from dotenv import load_dotenv
 
-from datamodels import ProjectExtraction
+from datamodels import ProjectExtraction, PROJECT_LIST
 from chain import run_rag
 
 load_dotenv(override=True)
@@ -63,7 +63,7 @@ def query_project(user_input: str) -> str:
     initial_extraction = project_name_extraction(user_input)
 
     if (
-        initial_extraction.project_name not in ["SPECTRO", "EMAI4EU", "RESCHIP4EU", "ACHIEVE"]
+        initial_extraction.project_name not in PROJECT_LIST
         or initial_extraction.confidence_score < 0.7
     ):
         logger.warning(

@@ -1,14 +1,18 @@
 """Data models for EU project document processing and management."""
 
-from typing import Optional
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
+PROJECT_LIST = [
+    "SPECTRO", "EMAI4EU", "RESCHIP4EU", "ACHIEVE",
+]
 
 class ProjectExtraction(BaseModel):
     """Data model for extracting project-related information from user queries."""
 
     question: str = Field(description="Question to be used as a query to the model")
-    project_name: str = Field(
+    project_name:  Literal["SPECTRO", "EMAI4EU", "RESCHIP4EU", "ACHIEVE"] = Field(
         description="Name of the project the user is asking about"
     )
 

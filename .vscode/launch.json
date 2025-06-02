@@ -1,0 +1,31 @@
+{
+    // Usare IntelliSense per informazioni sui possibili attributi.
+    // Al passaggio del mouse vengono visualizzate le descrizioni degli attributi esistenti.
+    // Per altre informazioni, visitare: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Streamlit",
+            "type": "python",
+            "request": "launch",
+            "module": "streamlit",
+            "env": {
+                "STREAMLIT_APP": "app.py",
+                "STREAMLIT_ENV": "development",
+                "PYTHONPATH": "${workspaceRoot}",
+            },
+            "args": [
+                "run",
+                "app.py"
+            ],
+            "jinja": true
+        },
+        {
+            "name": "Debugger Python",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "query.py",
+            "console": "integratedTerminal"
+        }
+    ]
+}

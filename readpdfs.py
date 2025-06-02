@@ -24,8 +24,18 @@ CROMA_DB_PATH = "./chroma_db"
 
 
 def extract_text_by_page(pdf_path):
+    """Extract text from each page of a PDF file.
+        Args:
+        pdf_path: Path to the PDF file
+    Returns:
+        List of strings, where each string contains the text from one page"""
+    
+    logger.info("Extracting text from PDF file %s", pdf_path)
+    
     doc = fitz.open(pdf_path)
     pages = [page.get_text() for page in doc]
+    
+    logger.debug("Extracted %d pages from PDF", len(pages))
     return pages
 
 def read_pdf_pages(filename: str) -> list[str]:

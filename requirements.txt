@@ -6,3 +6,4 @@ langchain-chroma
 open-webui
 termcolor
 pymupdf
+streamlit

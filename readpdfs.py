@@ -125,7 +125,7 @@ def get_chroma_db(project_conf: ProjetFileData) -> Chroma:
 
     logger.info("Splitting documents")
     documents = call_docs + proposal_docs + ga_docs
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     split_docs = splitter.split_documents(documents)
 
     logger.info("Creating Chroma collection %s", col_name)
@@ -136,7 +136,7 @@ def get_chroma_db(project_conf: ProjetFileData) -> Chroma:
     )
 
 
-def read_pdf_files(project_conf: ProjetFileData, returned_size : int = 150) -> Chroma:
+def read_pdf_files(project_conf: ProjetFileData, returned_size : int = 100) -> Chroma:
     """Read and process PDF files for a project, including call, proposal,
     and grant agreement documents.
     

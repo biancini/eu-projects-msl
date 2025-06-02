@@ -1,4 +1,7 @@
 """Module for analyzing and visualizing word count distribution in EU project documents."""
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import logging
 

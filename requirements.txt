@@ -1,8 +1,8 @@
 pydantic
-pdfplumber
 dotenv
 langchain
 langchain-openai
 langchain-chroma
 open-webui
 termcolor
+pymupdf

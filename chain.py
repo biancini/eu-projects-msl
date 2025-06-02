@@ -4,7 +4,6 @@ import os
 import logging
 
 from langchain.prompts import ChatPromptTemplate
-from langchain.load import dumps, loads
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI
@@ -16,26 +15,36 @@ from readpdfs import read_pdf_files
 logger = logging.getLogger(__name__)
 
 
-def reciprocal_rank_fusion(results: list[list], k=60):
-    """ Reciprocal_rank_fusion that takes multiple lists of ranked documents 
-        and an optional parameter k used in the RRF formula """
+def reciprocal_rank_fusion(results: list[list], k: int = 60):
+    """Reciprocal Rank Fusion that takes multiple lists of ranked documents and
+       an optional parameter k used in the RRF formula.
+       Uses document ID as key instead of serializing documents."""
 
+    logger.info("Starting reciprocal rank fusion")
     fused_scores = {}
+    doc_map = {}
+    max_docs = len(results[0])
 
-    logger.info("Reciprocal rank fusion with k=%s", k)
     for docs in results:
         for rank, doc in enumerate(docs):
-            doc_str = dumps(doc)
-            if doc_str not in fused_scores:
-                fused_scores[doc_str] = 0
-            fused_scores[doc_str] += 1 / (rank + k)
+            doc_id = doc.id
+            if doc_id not in fused_scores:
+                fused_scores[doc_id] = 0
+                doc_map[doc_id] = doc
+            fused_scores[doc_id] += 1. / (rank + k)
+
+    logger.info("Reciprocal rank fusion complete, processed %s documents", len(fused_scores))
+
+    fused_scores = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
+    if len(fused_scores) > max_docs:
+        logger.info("More documents found than max_docs (%s), truncating results", max_docs)
+        fused_scores = fused_scores[:max_docs]
 
     reranked_results = [
-        (loads(doc), score)
-        for doc, score in sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
+        (doc_map[doc_id], score)
+        for doc_id, score in fused_scores
     ]
 
-    logger.info("Reciprocal rank fusion complete, processed %s documents", len(reranked_results))
     return reranked_results
 
 
@@ -68,7 +77,7 @@ def run_rag(project_name: str, question: str) -> str:
     prompt_rag_fusion = ChatPromptTemplate.from_template("""
         You are a helpful assistant that generates multiple search queries based on a single input query. \n
         Generate multiple search queries related to: {question} \n
-        Output (5 queries):
+        Output (4 queries):
     """)
 
     logger.info("Generate queries")

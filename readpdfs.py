@@ -3,7 +3,7 @@
 import os
 import logging
 
-import pdfplumber
+import fitz
 from openai import OpenAI
 from chromadb import PersistentClient
 
@@ -22,6 +22,12 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 CROMA_DB_PATH = "./chroma_db"
 
 
+
+def extract_text_by_page(pdf_path):
+    doc = fitz.open(pdf_path)
+    pages = [page.get_text() for page in doc]
+    return pages
+
 def read_pdf_pages(filename: str) -> list[str]:
     """Extract text from all pages of a PDF file.
     
@@ -32,12 +38,9 @@ def read_pdf_pages(filename: str) -> list[str]:
         List of strings, where each string contains the text from one page
     """
     logger.info("Reading PDF pages for file %s", filename)
-    pages = []
 
-    with pdfplumber.open(filename) as pdf:
-        for page in pdf.pages:
-            page_text = page.extract_text()
-            pages.append(page_text)
+    doc = fitz.open(filename)
+    pages = [page.get_text() for page in doc]
 
     logger.debug("Read %d pages", len(pages))
     return pages
@@ -58,6 +61,7 @@ def get_documents_from_pdf(file_name: str, doc_type: str, project_name: str) -> 
 
     documents = [
         Document(
+            id=hash(page_texts[i]),
             page_content=page_texts[i],
             metadata={
                 "doc_type": doc_type,
@@ -68,6 +72,7 @@ def get_documents_from_pdf(file_name: str, doc_type: str, project_name: str) -> 
         for i in range(len(page_texts))
     ]
 
+    logger.info("Extracted %d documents from %s", len(documents), file_name)
     return documents
 
 def get_chroma_db(project_conf: ProjetFileData) -> Chroma:
@@ -120,7 +125,7 @@ def get_chroma_db(project_conf: ProjetFileData) -> Chroma:
 
     logger.info("Splitting documents")
     documents = call_docs + proposal_docs + ga_docs
-    splitter = RecursiveCharacterTextSplitter(chunk_size=128, chunk_overlap=32)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     split_docs = splitter.split_documents(documents)
 
     logger.info("Creating Chroma collection %s", col_name)
@@ -131,12 +136,13 @@ def get_chroma_db(project_conf: ProjetFileData) -> Chroma:
     )
 
 
-def read_pdf_files(project_conf: ProjetFileData) -> Chroma:
+def read_pdf_files(project_conf: ProjetFileData, returned_size : int = 150) -> Chroma:
     """Read and process PDF files for a project, including call, proposal,
     and grant agreement documents.
     
     Args:
         project_conf: Project configuration containing file paths
+        returned_size: Number of documents to return from the retriever
 
     Returns:
         Chroma object
@@ -144,15 +150,13 @@ def read_pdf_files(project_conf: ProjetFileData) -> Chroma:
 
     logger.info("Reading PDF files for project %s", project_conf.project_name)
 
-    returned_size = 500
-
     textdb = get_chroma_db(project_conf)
     retriever = textdb.as_retriever(
         search_type="mmr",
         search_kwargs={
             "k": returned_size,
-            "fetch_k": returned_size*2,
-            "lambda_mult": 0.5,
+            "fetch_k": int(returned_size*1.2),
+            "lambda_mult": 0.8,
         }
     )
 

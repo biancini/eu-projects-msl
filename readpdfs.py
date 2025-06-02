@@ -120,7 +120,7 @@ def get_chroma_db(project_conf: ProjetFileData) -> Chroma:
 
     logger.info("Splitting documents")
     documents = call_docs + proposal_docs + ga_docs
-    splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=64)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=128, chunk_overlap=32)
     split_docs = splitter.split_documents(documents)
 
     logger.info("Creating Chroma collection %s", col_name)
@@ -144,7 +144,7 @@ def read_pdf_files(project_conf: ProjetFileData) -> Chroma:
 
     logger.info("Reading PDF files for project %s", project_conf.project_name)
 
-    returned_size = 32
+    returned_size = 500
 
     textdb = get_chroma_db(project_conf)
     retriever = textdb.as_retriever(
@@ -152,7 +152,9 @@ def read_pdf_files(project_conf: ProjetFileData) -> Chroma:
         search_kwargs={
             "k": returned_size,
             "fetch_k": returned_size*2,
-            "lambda_mult": 0.5
+            "lambda_mult": 0.5,
         }
     )
+
+    logger.info("Retriever created with k=%s", returned_size)
     return retriever

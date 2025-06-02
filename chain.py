@@ -4,6 +4,7 @@ import os
 import logging
 
 from langchain.prompts import ChatPromptTemplate
+from langchain.load import dumps, loads
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI
@@ -13,6 +14,30 @@ from confs import  get_project_conf
 from readpdfs import read_pdf_files
 
 logger = logging.getLogger(__name__)
+
+
+def reciprocal_rank_fusion(results: list[list], k=60):
+    """ Reciprocal_rank_fusion that takes multiple lists of ranked documents 
+        and an optional parameter k used in the RRF formula """
+
+    fused_scores = {}
+
+    logger.info("Reciprocal rank fusion with k=%s", k)
+    for docs in results:
+        for rank, doc in enumerate(docs):
+            doc_str = dumps(doc)
+            if doc_str not in fused_scores:
+                fused_scores[doc_str] = 0
+            fused_scores[doc_str] += 1 / (rank + k)
+
+    reranked_results = [
+        (loads(doc), score)
+        for doc, score in sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
+    ]
+
+    logger.info("Reciprocal rank fusion complete, processed %s documents", len(reranked_results))
+    return reranked_results
+
 
 def run_rag(project_name: str, question: str) -> str:
     """Run RAG chain to answer questions about EU project documents.
@@ -37,42 +62,52 @@ def run_rag(project_name: str, question: str) -> str:
     logger.debug("Project data: %s", project_data)
 
     logger.info("Retrieve project documents from PDF files")
-    vectorstore_project_docs = read_pdf_files(project_conf)
+    retriever = read_pdf_files(project_conf)
 
-    logger.info("Build RAG chain")
+    logger.info("Do RAG-fusion to improve document extraction")
+    prompt_rag_fusion = ChatPromptTemplate.from_template("""
+        You are a helpful assistant that generates multiple search queries based on a single input query. \n
+        Generate multiple search queries related to: {question} \n
+        Output (5 queries):
+    """)
+
+    logger.info("Generate queries")
+    generate_queries = (
+        prompt_rag_fusion
+        | ChatOpenAI(model_name=os.getenv('MODEL'), temperature=0)
+        | StrOutputParser()
+        | (lambda x: x.split("\n"))
+    )
+
+    retrieval_chain_rag_fusion = generate_queries | retriever.map() | reciprocal_rank_fusion
+
     template = """You are a helpful assistant with access to the following context information:
     - Project Data: {context_project_data}
     - Project Documents: {context_project_docs}
 
     Based on the information above, please answer the following question as accurately and thoroughly as possible.
-    If the information is not available in the context, say so explicitly.
+    If the information is not available in the context, say so explicitly but try to answer the question, if generic enough, based on the information available.
 
     Question: {question}
 
     Please provide:
     A clear, plain-text answer (no markdown formatting).
     A list of all sources used, specifying the document name and page number(s) (e.g., "Proposal, p. 4"). If multiple documents are referenced, list them all.
-    At the end of the response, include a “Sources” section.
-    In this section, list only the unique page numbers referenced from the proposal.
+    At the end of the response, include a "Sources" section. In this section, list only the unique page numbers referenced from the proposal.
     Sort them in ascending order and group consecutive or nearby pages (within 2-3 pages apart) into ranges.
     Use the format: Proposal, pp. 61, 68-70, 79.
 
     Format your response as follows:
-    Answer:
+    Answer: 
     [Your detailed answer here]
     Sources:
-    - Call Text, p. X
-    - Proposal, p. Y-Z
-    - Grant Agreement, p. N
-
-    If the answer is not found in the documents, respond:
-    Answer: The information requested is not available in the provided context.
+    - Call Text p. 9, 10, 12-15
+    - Proposal p. 10-14, 25, 32-34
+    - Grant Agreement p. 1, 18-23
     """
 
     prompt = ChatPromptTemplate.from_template(template)
     llm = ChatOpenAI(model_name=os.getenv('MODEL'), temperature=0)
-
-    logger.info("Invoke RAG chain")
 
     context_project_data = {
         "project_name": project_data.project_name,
@@ -82,7 +117,7 @@ def run_rag(project_name: str, question: str) -> str:
     rag_chain = (
         {
             "context_project_data": lambda _: context_project_data,
-            "context_project_docs": vectorstore_project_docs,
+            "context_project_docs": retrieval_chain_rag_fusion,
             "question": RunnablePassthrough()
         }
         | prompt
@@ -90,5 +125,6 @@ def run_rag(project_name: str, question: str) -> str:
         | StrOutputParser()
     )
 
+    logger.info("Invoke RAG chain")
     result = rag_chain.invoke(question)
     return result

@@ -11,10 +11,7 @@ from dotenv import load_dotenv
 from datamodels import ProjectExtraction
 from chain import run_rag
 
-load_dotenv()
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-model = os.getenv('MODEL')
+load_dotenv(override=True)
 
 # Set up logging configuration
 logging.basicConfig(
@@ -24,6 +21,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+model = os.getenv('MODEL')
+logger.info("Using model: %s", model)
 
 def project_name_extraction(user_input: str) -> ProjectExtraction:
     """First LLM call to determine which project the user is asking about"""

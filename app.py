@@ -1,9 +1,10 @@
-"""Generates a streamlit web interface to chat with the bot."""
+"""Generates a streamlit web interface to chat with the bot, with logs shown on the right."""
 
 import streamlit as st
 
 from query import query_project
 
+st.set_page_config(layout="wide")
 st.title("Echo EU Project Bot")
 
 if "messages" not in st.session_state:
@@ -17,8 +18,8 @@ if prompt := st.chat_input("What is up?"):
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    response = query_project(prompt)
     with st.chat_message("assistant"):
+        response = query_project(prompt)
         st.markdown(response)
 
     st.session_state.messages.append({"role": "assistant", "content": response})

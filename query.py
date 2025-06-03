@@ -37,9 +37,9 @@ def project_name_extraction(user_input: str) -> ProjectExtraction:
         messages=[
             {
                 "role": "system",
-                "content": """Analyze the query text andasnwer if the query is related to a project.
+                "content": """Analyze the query text and answer if the query is related to a project.
 
-                Possible proects are SPECTRO, EMAI4EU, RESCHIP4EU and ACHIEVE.
+                Possible projects are SPECTRO, EMAI4EU, RESCHIP4EU and ACHIEVE.
                 """,
             },
             {"role": "user", "content": user_input},

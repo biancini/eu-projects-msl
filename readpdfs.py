@@ -99,15 +99,16 @@ def get_chroma_db(project_conf: ProjetFileData) -> Chroma:
 
     logger.info("Getting Chroma DB client")
     croma_db_client = PersistentClient(path=CROMA_DB_PATH)
-    collection_names = croma_db_client.list_collections()
+    collection_names = [c.name for c in croma_db_client.list_collections()]
 
     col_name = project_conf.project_name
 
     if col_name in collection_names:
         logger.info("Collection %s already exists", col_name)
-        return Chroma(col_name,
-                      persist_directory="./chroma_db",
-                      embedding_function=OpenAIEmbeddings(),
+        return Chroma(
+            collection_name=col_name,
+            persist_directory="./chroma_db",
+            embedding_function=OpenAIEmbeddings(),
         )
 
     logger.info("Collection %s does not exist, creating it", col_name)

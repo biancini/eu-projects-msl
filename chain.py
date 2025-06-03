@@ -106,13 +106,15 @@ def run_rag(project_name: str, question: str) -> str:
         Sort them in ascending order and group consecutive or nearby pages (within 2-3 pages apart) into ranges.
         Use the format: Proposal, pp. 61, 68-70, 79.
 
-        Format your response as follows:
-        Answer: 
+        Format your response as follows and use Markdown formatting:
+        ## Answer: 
         [Your detailed answer here]
-        Sources:
-        - Call: p. 9, 10, 12-15
-        - Proposal: p. 10-14, 25, 32-34
-        - Grant Agreement: p. 1, 18-23
+        ## Sources:
+        | Document Name   | Page Numbers     |
+        | --------------- | ---------------- |
+        | Call            | 9, 10, 12-15     |
+        | Proposal        | 10-14, 25, 32-34 |
+        | Grant Agreement | 1, 18-23         |
     """
 
     prompt = ChatPromptTemplate.from_template(template)

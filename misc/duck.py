@@ -9,12 +9,12 @@ conn.execute("INSTALL 'excel'; LOAD 'excel';")
 
 result = conn.execute(f"""
     SELECT * FROM read_xlsx(
-                      '{filename}',
-                      sheet='Movimenti',
-                      header=TRUE,
-                      range='3:1000000',
-                      all_varchar=TRUE,
-                      stop_at_empty=TRUE)
+        '{filename}',
+        sheet='Movimenti',
+        header=TRUE,
+        range='3:1000000',
+        all_varchar=TRUE,
+        stop_at_empty=TRUE)
 """).fetch_df()
 
 print(result)

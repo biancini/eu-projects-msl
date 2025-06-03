@@ -100,11 +100,10 @@ def get_chroma_db(project_conf: ProjetFileData) -> Chroma:
     logger.info("Getting Chroma DB client")
     croma_db_client = PersistentClient(path=CROMA_DB_PATH)
     collections = croma_db_client.list_collections()
-    existing = {c.name for c in collections}
 
     col_name = project_conf.project_name
 
-    if col_name in existing:
+    if col_name in collections:
         logger.info("Collection %s already exists", col_name)
         return Chroma(
             collection_name=col_name,

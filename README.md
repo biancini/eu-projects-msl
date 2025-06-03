@@ -45,7 +45,7 @@
 3. **Run the Application:**
 
    ```bash
-   python main.py
+   python app.py
    ```
 
    The application will process the PDFs, extract their content, and initialize the query interface.
@@ -56,7 +56,7 @@
 
 ## Project Structure
 
-- `main.py`: Entry point of the application.
+- `app.py`: Streamlit UI for interacting with the bot.
 - `readpdfs.py`: Handles the extraction of text from PDF files.
 - `chain.py`: Manages the processing chain for querying.
 - `datamodels.py`: Defines data models used within the application.

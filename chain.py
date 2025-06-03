@@ -91,28 +91,28 @@ def run_rag(project_name: str, question: str) -> str:
     retrieval_chain_rag_fusion = generate_queries | retriever.map() | reciprocal_rank_fusion
 
     template = """You are a helpful assistant with access to the following context information:
-    - Project Data: {context_project_data}
-    - Project Documents: {context_project_docs}
+        - Project Data: {context_project_data}
+        - Project Documents: {context_project_docs}
 
-    Based on the information above, please answer the following question as accurately and thoroughly as possible.
-    If the information is not available in the context, say so explicitly but try to answer the question, if generic enough, based on the information available.
+        Based on the information above, please answer the following question as accurately and thoroughly as possible.
+        If the information is not available in the context, say so explicitly but try to answer the question, if generic enough, based on the information available.
 
-    Question: {question}
+        Question: {question}
 
-    Please provide:
-    A clear, plain-text answer (no markdown formatting).
-    A list of all sources used, specifying the document name and page number(s) (e.g., "Proposal, p. 4"). If multiple documents are referenced, list them all.
-    At the end of the response, include a "Sources" section. In this section, list only the unique page numbers referenced from the proposal.
-    Sort them in ascending order and group consecutive or nearby pages (within 2-3 pages apart) into ranges.
-    Use the format: Proposal, pp. 61, 68-70, 79.
+        Please provide:
+        A clear, plain-text answer (no markdown formatting).
+        A list of all sources used, specifying the document name and page number(s) (e.g., "Proposal, p. 4"). If multiple documents are referenced, list them all.
+        At the end of the response, include a "Sources" section. In this section, list only the unique page numbers referenced from the proposal.
+        Sort them in ascending order and group consecutive or nearby pages (within 2-3 pages apart) into ranges.
+        Use the format: Proposal, pp. 61, 68-70, 79.
 
-    Format your response as follows:
-    Answer: 
-    [Your detailed answer here]
-    Sources:
-    - Call: p. 9, 10, 12-15
-    - Proposal: p. 10-14, 25, 32-34
-    - Grant Agreement: p. 1, 18-23
+        Format your response as follows:
+        Answer: 
+        [Your detailed answer here]
+        Sources:
+        - Call: p. 9, 10, 12-15
+        - Proposal: p. 10-14, 25, 32-34
+        - Grant Agreement: p. 1, 18-23
     """
 
     prompt = ChatPromptTemplate.from_template(template)

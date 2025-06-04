@@ -5,13 +5,17 @@ import os
 
 from termcolor import colored
 
+from langchain.schema import HumanMessage
+
 from openai import OpenAI
 from dotenv import load_dotenv
+from datamodels import ProjectExtraction
 
-from datamodels import ProjectExtraction, PROJECT_LIST
-from chain import run_rag
+from chain import run_rag, create_memory
+
 
 load_dotenv(override=True)
+memory = create_memory()
 
 # Set up logging configuration
 logging.basicConfig(
@@ -33,17 +37,23 @@ def project_name_extraction(user_input: str) -> ProjectExtraction:
     logger.info("Starting event extraction analysis")
     logger.debug("Input text: %s", user_input)
 
+    human_messages = [msg.content for msg in memory.chat_memory.messages if isinstance(msg, HumanMessage)]
+    human_messages.append(user_input)
+
     completion = client.beta.chat.completions.parse(
         model=model,
         messages=[
             {
                 "role": "system",
-                "content": """Analyze the query text and answer if the query is related to a project.
+                "content": """Analyze the query text history and answer if the query is related to a project.
                 Possible projects are SPECTRO, EMAI4EU, RESCHIP4EU and ACHIEVE.
                 Return a list of the project names and for each project a confidence score between 0 and 1.
                 """,
             },
-            {"role": "user", "content": user_input},
+            {
+                "role": "user",
+                "content": '\n'.join([message for message in human_messages])
+            },
         ],
         response_format=ProjectExtraction,
     )
@@ -85,7 +95,7 @@ def query_project(user_input: str) -> str:
         return None
 
     logger.info("Gate check passed, proceeding with event processing")
-    query_result = run_rag(project_name, user_input)
+    query_result = run_rag(project_name, user_input, memory)
     return query_result
 
 

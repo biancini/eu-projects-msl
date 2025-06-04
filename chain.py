@@ -4,6 +4,8 @@ import os
 import logging
 
 from langchain.prompts import ChatPromptTemplate
+from langchain.memory import ConversationBufferMemory
+from langchain.schema.runnable import RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI
@@ -13,6 +15,12 @@ from confs import  get_project_conf
 from readpdfs import read_pdf_files
 
 logger = logging.getLogger(__name__)
+
+
+def create_memory() -> ConversationBufferMemory:
+    """Create a memory instance to store conversation history."""
+
+    return ConversationBufferMemory(return_messages=True)
 
 
 def reciprocal_rank_fusion(results: list[list], k: int = 60):
@@ -48,7 +56,7 @@ def reciprocal_rank_fusion(results: list[list], k: int = 60):
     return reranked_results
 
 
-def run_rag(project_name: str, question: str) -> str:
+def run_rag(project_name: str, question: str, memory: ConversationBufferMemory) -> str:
     """Run RAG chain to answer questions about EU project documents.
     
     Args:
@@ -99,6 +107,9 @@ def run_rag(project_name: str, question: str) -> str:
 
         Question: {question}
 
+        Conversation history:
+        {history}
+
         Please provide:
         A clear, plain-text answer (no markdown formatting).
         A list of all sources used, specifying the document name and page number(s) (e.g., "Proposal, p. 4"). If multiple documents are referenced, list them all.
@@ -129,7 +140,8 @@ def run_rag(project_name: str, question: str) -> str:
         {
             "context_project_data": lambda _: context_project_data,
             "context_project_docs": retrieval_chain_rag_fusion,
-            "question": RunnablePassthrough()
+            "question": RunnablePassthrough(),
+            "history": RunnableLambda(lambda _: memory.buffer)
         }
         | prompt
         | llm
@@ -138,4 +150,9 @@ def run_rag(project_name: str, question: str) -> str:
 
     logger.info("Invoke RAG chain")
     result = rag_chain.invoke(question)
+
+    logger.info("Adding user question and AI response to memory")
+    memory.chat_memory.add_user_message(question)
+    memory.chat_memory.add_ai_message(result)
+
     return result

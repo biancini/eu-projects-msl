@@ -26,6 +26,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 model = os.getenv('MODEL')
 logger.info("Using model: %s", model)
 
+
 def project_name_extraction(user_input: str) -> ProjectExtraction:
     """First LLM call to determine which project the user is asking about"""
 
@@ -38,21 +39,37 @@ def project_name_extraction(user_input: str) -> ProjectExtraction:
             {
                 "role": "system",
                 "content": """Analyze the query text and answer if the query is related to a project.
-
                 Possible projects are SPECTRO, EMAI4EU, RESCHIP4EU and ACHIEVE.
+                Return a list of the project names and for each project a confidence score between 0 and 1.
                 """,
             },
             {"role": "user", "content": user_input},
         ],
         response_format=ProjectExtraction,
     )
+
+    max_confidence = 0
+    project_name = None
     result = completion.choices[0].message.parsed
-    logger.info(
-        "Extraction complete - Project name: %s, Confidence: %.2f",
-        result.project_name,
-        result.confidence_score
-    )
-    return result
+    for (project, confidence) in zip(result.project_name, result.confidence_score):
+        logger.info("Project found: %s with confidence %.2f", project, confidence)
+
+        if (
+            confidence >= 0.7
+            and confidence > max_confidence
+            ):
+            max_confidence = confidence
+            project_name = project
+
+    if project_name is None:
+        logger.info("No project found with sufficient confidence in the query")
+    else:
+        logger.info(
+            "Extraction complete - Working on project name: %s, Confidence: %.2f",
+            project_name,
+            max_confidence
+        )
+    return project_name
 
 
 def query_project(user_input: str) -> str:
@@ -61,22 +78,14 @@ def query_project(user_input: str) -> str:
     logger.info("Processing user query")
     logger.debug("Raw input: %s", user_input)
 
-    initial_extraction = project_name_extraction(user_input)
+    project_name = project_name_extraction(user_input)
 
-    if (
-        initial_extraction.project_name not in PROJECT_LIST
-        or initial_extraction.confidence_score < 0.7
-    ):
-        logger.warning(
-            "Gate check failed - project name: %s, confidence: %.2f",
-            initial_extraction.project_name,
-            initial_extraction.confidence_score
-        )
+    if project_name is None:
+        logger.info("No project found in the query, stopping processing",)
         return None
 
     logger.info("Gate check passed, proceeding with event processing")
-
-    query_result = run_rag(initial_extraction.project_name, user_input)
+    query_result = run_rag(project_name, user_input)
     return query_result
 
 

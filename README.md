@@ -54,6 +54,37 @@
 
    Once the setup is complete, you can input natural language queries to retrieve information from the processed documents.
 
+## Testing with OpenAI Evals
+
+This module supports evaluation using the OpenAI Evals framework. Test cases are defined in JSONL format within the test_evals/data/ directory.
+
+### Running the Evaluation
+
+To execute the tests, use the following command from the root directory of your project:
+
+PYTHONPATH=".:test_evals" oaieval eu_rag spectro-eval --registry-path test_evals
+
+Explanation:
+-	PYTHONPATH=".:test_evals": Adds the current directory and test_evals to the Python path, ensuring that custom modules are discoverable.
+-	oaieval eu_rag spectro-eval: Runs the evaluation using the eu_rag completion function and the spectro-eval evaluation configuration.
+-	--registry-path test_evals: Specifies the path to the registry containing evaluation configurations and data.
+
+### Defining Test Cases
+
+Each test case in the spectro_eval.jsonl file should be a JSON object with the following structure:
+```json
+{
+  "input": "What is the capital of France?",
+  "ideal": "Paris"
+}
+```
+
+Explanation:
+-	input: The prompt or question to be evaluated.
+-	ideal: The expected correct response from the model.
+
+Ensure that each test case is on a separate line in the JSONL file.
+
 ## Project Structure
 
 - `app.py`: Streamlit UI for interacting with the bot.

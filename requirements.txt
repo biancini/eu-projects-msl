@@ -8,3 +8,4 @@ termcolor
 pymupdf
 streamlit
 watchdog
+evals

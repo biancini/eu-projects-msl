@@ -1,0 +1,7 @@
+eu_rag:
+  id: eu_rag.test.v1
+  metrics: [accuracy]
+
+eu_rag.test.v1:
+  class: eu_rag_completion_fn:EuRAGCompletionFn
+  args: {}

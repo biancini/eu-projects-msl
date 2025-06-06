@@ -1,8 +1,17 @@
 """Generates a streamlit web interface to chat with the bot, with logs shown on the right."""
 
+import logging
+
 import streamlit as st
 
 from query import query_project
+
+# Set up logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 st.set_page_config(layout="wide")
 st.title("EU Projects Answering Bot")

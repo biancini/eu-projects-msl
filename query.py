@@ -13,16 +13,10 @@ from datamodels import ProjectExtraction
 
 from chain import run_rag, create_memory
 
+# pylint: disable=no-member
 
 load_dotenv(override=True)
 memory = create_memory()
-
-# Set up logging configuration
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +31,11 @@ def project_name_extraction(user_input: str) -> ProjectExtraction:
     logger.info("Starting event extraction analysis")
     logger.debug("Input text: %s", user_input)
 
-    human_messages = [msg.content for msg in memory.chat_memory.messages if isinstance(msg, HumanMessage)]
+    human_messages = [
+        msg.content
+        for msg in memory.chat_memory.messages
+        if isinstance(msg, HumanMessage)
+    ]
     human_messages.append(user_input)
 
     completion = client.beta.chat.completions.parse(
@@ -46,9 +44,9 @@ def project_name_extraction(user_input: str) -> ProjectExtraction:
             {
                 "role": "system",
                 "content": """Analyze the query text history and answer if the query is related to a project.
-                Possible projects are SPECTRO, EMAI4EU, RESCHIP4EU and ACHIEVE.
-                Return a list of the project names and for each project a confidence score between 0 and 1.
-                """,
+                    Possible projects are SPECTRO, EMAI4EU, RESCHIP4EU and ACHIEVE.
+                    Return a list of the project names and for each project a confidence score between 0 and 1.
+                    """,
             },
             {
                 "role": "user",

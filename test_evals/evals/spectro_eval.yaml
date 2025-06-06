@@ -1,0 +1,11 @@
+spectro-eval:
+  id: spectro-eval.test.v1
+  metrics: [modelgraded]
+  eval_type: modelgraded
+  description: Evaluate the model's ability to answer questions about SPECTRO.
+  completion_fn: eu_rag
+
+spectro-eval.test.v1:
+  class: eu_rag_eval_fn:LLMEval
+  args:
+    samples_jsonl: tests.jsonl

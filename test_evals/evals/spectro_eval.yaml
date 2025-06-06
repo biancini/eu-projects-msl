@@ -2,7 +2,7 @@ spectro-eval:
   id: spectro-eval.test.v1
   metrics: [modelgraded]
   eval_type: modelgraded
-  description: Evaluate the model's ability to answer questions about SPECTRO.
+  description: Evaluate the model's ability to answer questions about EU projects.
   completion_fn: eu_rag
 
 spectro-eval.test.v1:

@@ -92,6 +92,7 @@ Ensure that each test case is on a separate line in the JSONL file.
 - `chain.py`: Manages the processing chain for querying.
 - `datamodels.py`: Defines data models used within the application.
 - `confs.py`: Contains configuration settings.
+- `query.py`: Implements functions for querying the document database or vector store, retrieving the most relevant information based on user input.
 - `requirements.txt`: Lists all Python dependencies.
 
 ## Contributing
@@ -100,7 +101,7 @@ Contributions are welcome! If you have suggestions or improvements, feel free to
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENCE](LICENCE) file for details.
 
 ## Acknowledgments
 

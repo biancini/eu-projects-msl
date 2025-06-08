@@ -1,10 +1,9 @@
-pydantic
 dotenv
+pydantic
 langchain
 langchain-openai
 langchain-chroma
-termcolor
 pymupdf
 streamlit
-watchdog
+termcolor
 evals

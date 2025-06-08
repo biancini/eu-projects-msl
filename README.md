@@ -69,27 +69,31 @@ This module supports evaluation using the OpenAI Evals framework. Test cases are
 To execute the tests, use the following command from the root directory of your project:
 
 ```bash
-PYTHONPATH=".:test_evals" oaieval eu_rag spectro-eval --registry-path test_evals
+PYTHONPATH=".:test_evals" oaieval eu_rag euprojects-eval --registry-path test_evals
 ```
 
 Explanation:
 -	PYTHONPATH=".:test_evals": Adds the current directory and test_evals to the Python path, ensuring that custom modules are discoverable.
--	oaieval eu_rag spectro-eval: Runs the evaluation using the eu_rag completion function and the spectro-eval evaluation configuration.
+-	oaieval eu_rag euprojects-eval: Runs the evaluation using the eu_rag completion function and the euprojects-eval evaluation configuration.
 -	--registry-path test_evals: Specifies the path to the registry containing evaluation configurations and data.
 
 ### Defining Test Cases
 
-Each test case in the spectro_eval.jsonl file should be a JSON object with the following structure:
+Each test case in the tests.jsonl file should be a JSON object with the following structure:
 ```json
 {
-  "input": "What is the capital of France?",
-  "ideal": "Paris"
+  "test_id": 1,
+  "input": "how many KPIs do SPECTRO have?",
+  "ideal": "SPECTRO has a total of 22 Key Performance Indicators (KPIs).",
+  "pages": "Proposal 98-99\nGrant Agreement 81-82"
 }
 ```
 
 Explanation:
--	input: The prompt or question to be evaluated.
+-  test_id: A unique identifier for the test case.
+-	in input: The prompt or question to be evaluated.
 -	ideal: The expected correct response from the model.
+-	pages: The pages from which the information is extracted, formatted as "Proposal page numbers\nGrant Agreement page numbers".
 
 Ensure that each test case is on a separate line in the JSONL file.
 

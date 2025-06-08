@@ -10,9 +10,9 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI
 
-from datamodels import ProjectData
-from confs import  get_project_conf
-from readpdfs import read_pdf_files
+from euprojectsrag.datamodels import ProjectData
+from euprojectsrag.confs import  get_project_conf
+from euprojectsrag.readpdfs import read_pdf_files
 
 logger = logging.getLogger(__name__)
 

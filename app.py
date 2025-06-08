@@ -4,7 +4,7 @@ import logging
 
 import streamlit as st
 
-from query import query_project
+from euprojectsrag import query_project
 
 # Set up logging configuration
 logging.basicConfig(

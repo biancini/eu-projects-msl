@@ -12,7 +12,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 
-from confs import ProjetFileData
+from euprojectsrag.confs import ProjetFileData
 
 logging.getLogger("pdfminer").setLevel(logging.ERROR)
 

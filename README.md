@@ -85,16 +85,6 @@ Explanation:
 
 Ensure that each test case is on a separate line in the JSONL file.
 
-## Project Structure
-
-- `app.py`: Streamlit UI for interacting with the bot.
-- `readpdfs.py`: Handles the extraction of text from PDF files.
-- `chain.py`: Manages the processing chain for querying.
-- `datamodels.py`: Defines data models used within the application.
-- `confs.py`: Contains configuration settings.
-- `query.py`: Implements functions for querying the document database or vector store, retrieving the most relevant information based on user input.
-- `requirements.txt`: Lists all Python dependencies.
-
 ## Contributing
 
 Contributions are welcome! If you have suggestions or improvements, feel free to fork the repository and submit a pull request.

@@ -1,4 +1,4 @@
-"""eu-projects-msl package"""
+"""euprojectsrag"""
 
 # Import necessary modules or classes here
 from .query import query_project

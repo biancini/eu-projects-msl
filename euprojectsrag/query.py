@@ -3,15 +3,13 @@
 import logging
 import os
 
-from termcolor import colored
-
 from langchain.schema import HumanMessage
 
 from openai import OpenAI
 from dotenv import load_dotenv
-from datamodels import ProjectExtraction
 
-from chain import run_rag, create_memory
+from euprojectsrag.datamodels import ProjectExtraction
+from euprojectsrag.chain import run_rag, create_memory
 
 # pylint: disable=no-member
 
@@ -95,9 +93,3 @@ def query_project(user_input: str) -> str:
     logger.info("Gate check passed, proceeding with event processing")
     query_result = run_rag(project_name, user_input, memory)
     return query_result
-
-
-if __name__ == "__main__":
-    question = input(colored("Enter the question you want to ask to the project:\n", "green"))
-    asnwer = query_project(question)
-    print(colored(asnwer, "green"))

@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from evals import Eval
 from dotenv import load_dotenv
-from query import query_project
+from euprojectsrag.query import query_project
 
 
 class TestSampleExecution(BaseModel):

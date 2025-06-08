@@ -3,9 +3,8 @@
 import os
 import logging
 
-import fitz
 from typing import List
-
+import fitz
 from openai import OpenAI
 from chromadb import PersistentClient
 

@@ -48,7 +48,7 @@ def project_name_extraction(user_input: str) -> ProjectExtraction:
             },
             {
                 "role": "user",
-                "content": '\n'.join([message for message in human_messages])
+                "content": '\n'.join(human_messages)
             },
         ],
         response_format=ProjectExtraction,

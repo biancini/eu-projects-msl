@@ -1,10 +1,6 @@
 """Generates a list of documents from a PDF file and print them."""
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from readpdfs import get_documents_from_pdf
-from confs import get_project_conf
+from euprojectsrag.readpdfs import get_documents_from_pdf
+from euprojectsrag.confs import get_project_conf
 
 project_conf = get_project_conf("SPECTRO")
 

@@ -3,6 +3,8 @@
 import os
 import logging
 
+from typing import List
+
 from langchain.prompts import ChatPromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.schema.runnable import RunnableLambda
@@ -23,7 +25,7 @@ def create_memory() -> ConversationBufferMemory:
     return ConversationBufferMemory(return_messages=True)
 
 
-def reciprocal_rank_fusion(results: list[list], k: int = 60):
+def reciprocal_rank_fusion(results: List[List], k: int = 60):
     """Reciprocal Rank Fusion that takes multiple lists of ranked documents and
        an optional parameter k used in the RRF formula.
        Uses document ID as key instead of serializing documents."""

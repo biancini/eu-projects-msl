@@ -1,6 +1,6 @@
 """Data models for EU project document processing and management."""
 
-from typing import Literal
+from typing import Literal, List
 
 from pydantic import BaseModel, Field
 
@@ -12,11 +12,11 @@ class ProjectExtraction(BaseModel):
     """Data model for extracting project-related information from user queries."""
 
     question: str = Field(description="Question to be used as a query to the model")
-    project_name:  list[Literal["SPECTRO", "EMAI4EU", "RESCHIP4EU", "ACHIEVE"]] = Field(
+    project_name:  List[Literal["SPECTRO", "EMAI4EU", "RESCHIP4EU", "ACHIEVE"]] = Field(
         description="Name of the project the user is asking about"
     )
 
-    confidence_score: list[float] = Field(description="Confidence score between 0 and 1")
+    confidence_score: List[float] = Field(description="Confidence score between 0 and 1")
 
 class ProjetFileData(BaseModel):
     """Data model containing file paths for project-related file documents."""

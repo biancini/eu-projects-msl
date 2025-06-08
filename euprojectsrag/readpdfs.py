@@ -4,6 +4,8 @@ import os
 import logging
 
 import fitz
+from typing import List
+
 from openai import OpenAI
 from chromadb import PersistentClient
 
@@ -29,16 +31,16 @@ def extract_text_by_page(pdf_path):
         pdf_path: Path to the PDF file
     Returns:
         List of strings, where each string contains the text from one page"""
-    
+
     logger.info("Extracting text from PDF file %s", pdf_path)
-    
+
     doc = fitz.open(pdf_path)
     pages = [page.get_text() for page in doc]
-    
+
     logger.debug("Extracted %d pages from PDF", len(pages))
     return pages
 
-def read_pdf_pages(filename: str) -> list[str]:
+def read_pdf_pages(filename: str) -> List[str]:
     """Extract text from all pages of a PDF file.
     
     Args:
@@ -56,7 +58,7 @@ def read_pdf_pages(filename: str) -> list[str]:
     return pages
 
 
-def get_documents_from_pdf(file_name: str, doc_type: str, project_name: str) -> list[Document]:
+def get_documents_from_pdf(file_name: str, doc_type: str, project_name: str) -> List[Document]:
     """Get documents from a PDF file.
 
     Args:

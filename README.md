@@ -50,6 +50,12 @@
 
    The application will process the PDFs, extract their content, and initialize the query interface.
 
+   You can also run the application in console mode by executing:
+
+   ```bash
+   python main.py
+   ```
+
 4. **Query the Documents:**
 
    Once the setup is complete, you can input natural language queries to retrieve information from the processed documents.
@@ -62,7 +68,9 @@ This module supports evaluation using the OpenAI Evals framework. Test cases are
 
 To execute the tests, use the following command from the root directory of your project:
 
+```bash
 PYTHONPATH=".:test_evals" oaieval eu_rag spectro-eval --registry-path test_evals
+```
 
 Explanation:
 -	PYTHONPATH=".:test_evals": Adds the current directory and test_evals to the Python path, ensuring that custom modules are discoverable.

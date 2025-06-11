@@ -10,7 +10,8 @@ from pydantic import BaseModel, Field
 
 from evals import Eval
 from dotenv import load_dotenv
-from euprojectsrag.query import query_project
+
+from ..src.euprojectsrag.rag_chain import RAGChain
 
 
 class TestSampleExecution(BaseModel):
@@ -41,8 +42,9 @@ class LLMEval(Eval):
         Evaluates the quality of the actual answer against the expected answer using OpenAI's API.
         Returns a score from 1 to 10.
         """
+        rag_chain = RAGChain()
         query = sample.get("input", "")
-        actual_answer = query_project(query)
+        actual_answer = rag_chain.query_project(query)
         expected_answer = sample.get("ideal", "")
         pages = sample.get("pages", "")
 

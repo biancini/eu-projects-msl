@@ -1,9 +1,0 @@
-dotenv
-pydantic
-langchain
-langchain-openai
-langchain-chroma
-pymupdf
-streamlit
-termcolor
-evals

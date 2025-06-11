@@ -1,11 +1,8 @@
 """euprojectsrag"""
 
 # Import necessary modules or classes here
-from .query import query_project
-from .confs import get_project_conf
-
 __all__ = [
-    "query_project",
+    "RAGChain",
     "get_project_conf",
 ]
 

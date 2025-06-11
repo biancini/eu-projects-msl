@@ -7,7 +7,7 @@ from typing import List
 
 from evals.api import CompletionFn, CompletionResult
 
-from euprojectsrag.query import query_project
+from ..src.euprojectsrag.rag_chain import RAGChain
 
 
 class RetrievalCompletionResult(CompletionResult):
@@ -29,5 +29,6 @@ class EuRAGCompletionFn(CompletionFn):
 
     def __call__(self, prompt: str, **kwargs) -> CompletionResult:
         # Generate a response using your RAG system
-        response = query_project(prompt)
+        rag_chain = RAGChain()
+        response = rag_chain.query_project(prompt)
         return RetrievalCompletionResult(response)

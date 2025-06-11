@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "Python: Streamlit",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "module": "streamlit",
             "env": {
@@ -16,7 +16,7 @@
             },
             "args": [
                 "run",
-                "app.py"
+                "src/app.py"
             ],
             "jinja": true
         },
@@ -24,7 +24,7 @@
             "name": "Debugger Python",
             "type": "debugpy",
             "request": "launch",
-            "program": "query.py",
+            "program": "src/query.py",
             "console": "integratedTerminal"
         }
     ]

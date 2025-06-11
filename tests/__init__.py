@@ -1,9 +1,5 @@
 """test_evals package"""
 
-# Import necessary modules or classes here
-from .eu_rag_completion_fn import EuRAGCompletionFn
-from .eu_rag_eval_fn import LLMEval
-
 __all__ = [
     "EuRAGCompletionFn",
     "LLMEval",

@@ -4,9 +4,10 @@ It uses OpenAI's API to score the responses based on relevance and completeness.
 
 from termcolor import colored
 
-from euprojectsrag import query_project
+from src.euprojectsrag.rag_chain import RAGChain
 
 if __name__ == "__main__":
+    rag_chain = RAGChain()
     question = input(colored("Enter the question you want to ask to the project:\n", "green"))
-    asnwer = query_project(question)
+    asnwer = rag_chain.query_project(question)
     print(colored(asnwer, "green"))

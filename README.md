@@ -29,7 +29,7 @@
 3. **Install Dependencies:**
 
    ```bash
-   pip install -r requirements.txt
+   pip install -e .
    ```
 
 ## Usage
@@ -40,12 +40,12 @@
 
 2. **Configure the Application:**
 
-   Review and modify `confs.py` to set the appropriate paths and configurations for your environment.
+   Review and modify `configurations.py` to set the appropriate paths and configurations for your environment.
 
 3. **Run the Application:**
 
    ```bash
-   python app.py
+   python src/app.py
    ```
 
    The application will process the PDFs, extract their content, and initialize the query interface.
@@ -53,7 +53,7 @@
    You can also run the application in console mode by executing:
 
    ```bash
-   python main.py
+   python src/main.py
    ```
 
 4. **Query the Documents:**
@@ -69,7 +69,7 @@ This module supports evaluation using the OpenAI Evals framework. Test cases are
 To execute the tests, use the following command from the root directory of your project:
 
 ```bash
-PYTHONPATH=".:test_evals" oaieval eu_rag euprojects-eval --registry-path test_evals
+PYTHONPATH=".:tests" oaieval eu_rag euprojects-eval --registry-path test_evals
 ```
 
 Explanation:

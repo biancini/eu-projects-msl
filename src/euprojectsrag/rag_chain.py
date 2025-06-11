@@ -5,14 +5,14 @@ import logging
 
 from typing import List
 
-from langchain.schema import HumanMessage
-
 from openai import OpenAI
 from dotenv import load_dotenv
+
+from langchain.schema import HumanMessage
 from langchain.prompts import ChatPromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.schema.runnable import RunnableLambda
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI
 
@@ -134,15 +134,15 @@ class RAGChain():
             Sort them in ascending order and group consecutive or nearby pages (within 2-3 pages apart) into ranges.
             Use the format: Proposal, pp. 61, 68-70, 79.
 
-            Format your response as follows and use Markdown formatting:
-            ## Answer: 
-            [Your detailed answer here]
-            ## Sources:
-            | Document Name   | Page Numbers     |
-            | --------------- | ---------------- |
-            | Call            | 9, 10, 12-15     |
-            | Proposal        | 10-14, 25, 32-34 |
-            | Grant Agreement | 1, 18-23         |
+            Format your response in JSON format and user Markdown formatting for the texts.
+            Here an example of what you have to answer:
+            {{
+            'asnwer': 'Your detailed answer here',
+            'sources': [
+                {{'document_name': 'Call', 'page_numbers': '9, 10, 12-15'}},
+                {{'document_name': 'Proposal', 'page_numbers': '10-14, 25, 32-34'}},
+                {{'document_name': 'Grant Agreement', 'page_numbers': '1, 18-23'}}
+            ]}}
         """
 
         prompt = ChatPromptTemplate.from_template(template)
@@ -162,7 +162,7 @@ class RAGChain():
             }
             | prompt
             | llm
-            | StrOutputParser()
+            | JsonOutputParser()
         )
 
         self.logger.info("Invoke RAG chain")
@@ -170,7 +170,7 @@ class RAGChain():
 
         self.logger.info("Adding user question and AI response to memory")
         memory.chat_memory.add_user_message(question)
-        memory.chat_memory.add_ai_message(result)
+        memory.chat_memory.add_ai_message(result['answer'])
 
         return result
     
@@ -221,27 +221,34 @@ class RAGChain():
 
         if project_name is None:
             self.logger.info("No project found with sufficient confidence in the query")
-        else:
-            self.logger.info(
-                "Extraction complete - Working on project name: %s, Confidence: %.2f",
-                project_name,
-                max_confidence
-            )
+            return "default"
+        
+        self.logger.info(
+            "Extraction complete - Working on project name: %s, Confidence: %.2f",
+            project_name,
+            max_confidence
+        )
         return project_name
 
 
-    def query_project(self, user_input: str) -> str:
-        """Query the project with the given question."""
+    def query_project(self, user_input: str, project_name: "default") -> str:
+        """Query the project with the given question.
+            Args:
+            user_input: The question or query from the user
+            project_name: The name of the project to query
+            Returns:           
+            str: The answer to the user's question based on the project documents"""
 
         self.logger.info("Processing user query")
         self.logger.debug("Raw input: %s", user_input)
 
-        project_name = self.project_name_extraction(user_input)
+        if project_name == "default":
+            project_name = self.project_name_extraction(user_input)
 
-        if project_name is None:
+        if project_name == "default":
             self.logger.info("No project found in the query, stopping processing",)
             return None
 
         self.logger.info("Gate check passed, proceeding with event processing")
         query_result = self.run_rag(project_name, user_input, self.memory)
-        return query_result
+        return project_name, query_result

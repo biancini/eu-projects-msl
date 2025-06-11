@@ -3,7 +3,7 @@
 import os
 import logging
 
-from typing import List
+from typing import List, Dict
 import fitz
 from openai import OpenAI
 from chromadb import PersistentClient
@@ -26,7 +26,7 @@ class FileReader():
         self.logger = logging.getLogger(__name__)
 
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.CROMA_DB_PATH = "./chroma_db"
+        self.croma_db_path = "./chroma_db"
 
     def extract_text_by_page(self, pdf_path):
         """Extract text from each page of a PDF file.
@@ -90,35 +90,25 @@ class FileReader():
 
         self.logger.info("Extracted %d documents from %s", len(documents), file_name)
         return documents
-
-    def get_chroma_db(self, project_conf: ProjetFileData) -> Chroma:
-        """Get a Chroma object for a given collection name.
+    
+    def get_collection_names(self) -> Dict[str, int]:
+        """Get the names of all collections in the Chroma database.
         
-        Args:
-            project_data: Project data object to store processed text
-            collection_name: Name of the collection
-            pdf_filename: Path to the PDF file
-            
         Returns:
-            Chroma object
+            List of collection names
         """
+        croma_db_client = PersistentClient(path=self.croma_db_path)
+        coll_names = croma_db_client.list_collections()
 
-        self.logger.info("Getting Chroma DB client")
-        croma_db_client = PersistentClient(path=self.CROMA_DB_PATH)
-        collections = croma_db_client.list_collections()
+        collections = {}
+        for coll in coll_names:
+            doc_count = croma_db_client.get_collection(coll).count()
+            collections[coll] = doc_count
 
-        col_name = project_conf.project_name
+        return collections
 
-        if col_name in collections:
-            self.logger.info("Collection %s already exists", col_name)
-            return Chroma(
-                collection_name=col_name,
-                persist_directory="./chroma_db",
-                embedding_function=OpenAIEmbeddings(),
-            )
 
-        self.logger.info("Collection %s does not exist, creating it", col_name)
-
+    def read_project_files(self, project_conf: ProjetFileData) -> List[Document]:
         self.logger.info("Reading call file for project %s", project_conf.project_name)
         call_docs = self.get_documents_from_pdf(
             project_conf.base_path + project_conf.call_file,
@@ -143,7 +133,37 @@ class FileReader():
         self.logger.info("Splitting documents")
         documents = call_docs + proposal_docs + ga_docs
         splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-        split_docs = splitter.split_documents(documents)
+        return splitter.split_documents(documents)
+
+
+    def get_chroma_db(self, project_conf: ProjetFileData) -> Chroma:
+        """Get a Chroma object for a given collection name.
+        
+        Args:
+            project_data: Project data object to store processed text
+            collection_name: Name of the collection
+            pdf_filename: Path to the PDF file
+            
+        Returns:
+            Chroma object
+        """
+
+        self.logger.info("Getting Chroma DB client")
+        croma_db_client = PersistentClient(path=self.croma_db_path)
+        collections = croma_db_client.list_collections()
+
+        col_name = project_conf.project_name
+
+        if col_name in collections:
+            self.logger.info("Collection %s already exists", col_name)
+            return Chroma(
+                collection_name=col_name,
+                persist_directory="./chroma_db",
+                embedding_function=OpenAIEmbeddings(),
+            )
+
+        self.logger.info("Collection %s does not exist, creating it", col_name)
+        split_docs = self.read_project_files(project_conf)
 
         self.logger.info("Creating Chroma collection %s", col_name)
         return Chroma.from_documents(collection_name=col_name,

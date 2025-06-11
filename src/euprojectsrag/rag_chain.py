@@ -9,9 +9,6 @@ from langchain.schema import HumanMessage
 
 from openai import OpenAI
 from dotenv import load_dotenv
-
-from src.euprojectsrag.data_models import ProjectExtraction
-
 from langchain.prompts import ChatPromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.schema.runnable import RunnableLambda
@@ -19,9 +16,10 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI
 
-from src.euprojectsrag.file_reader import ReadPDFs
-from src.euprojectsrag.data_models import ProjectData
-from src.euprojectsrag.configurations import  get_project_conf
+from euprojectsrag.data_models import ProjectExtraction
+from euprojectsrag.file_reader import FileReader
+from euprojectsrag.data_models import ProjectData
+from euprojectsrag.configurations import  get_project_conf
 
 
 # pylint: disable=no-member
@@ -32,7 +30,7 @@ class RAGChain():
     def __init__(self):
         """Initialize the RAGChain."""
         self.logger = logging.getLogger(__name__)
-        self.pdf_reader = ReadPDFs()
+        self.pdf_reader = FileReader()
 
         load_dotenv(override=True)
         self.memory = ConversationBufferMemory(return_messages=True)

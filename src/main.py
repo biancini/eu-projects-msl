@@ -4,7 +4,7 @@ It uses OpenAI's API to score the responses based on relevance and completeness.
 
 from termcolor import colored
 
-from src.euprojectsrag.rag_chain import RAGChain
+from euprojectsrag.rag_chain import RAGChain
 
 if __name__ == "__main__":
     rag_chain = RAGChain()

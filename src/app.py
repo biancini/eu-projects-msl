@@ -4,7 +4,7 @@ import logging
 
 import streamlit as st
 
-from src.euprojectsrag.rag_chain import RAGChain
+from euprojectsrag.rag_chain import RAGChain
 
 def main():
     # Set up logging configuration

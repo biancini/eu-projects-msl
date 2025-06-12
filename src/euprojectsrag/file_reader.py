@@ -173,7 +173,7 @@ class FileReader():
         )
 
 
-    def read_pdf_files(self, project_conf: ProjetFileData, returned_size : int = 100) -> Chroma:
+    def read_pdf_files(self, project_conf: ProjetFileData, returned_size : int = 500) -> Chroma:
         """Read and process PDF files for a project, including call, proposal,
         and grant agreement documents.
         

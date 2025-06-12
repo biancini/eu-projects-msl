@@ -8,8 +8,8 @@ import streamlit as st
 
 from euprojectsrag.rag_chain import RAGChain
 from euprojectsrag.file_reader import FileReader
-from euprojectsrag.configurations import ProjetFileData
-from euprojectsrag.configurations import get_project_conf
+from euprojectsrag.configurations import ProjetFileData, get_project_conf
+from euprojectsrag.data_models import PROJECT_LIST
 
 st.set_page_config(
     page_title="RAG Chat System",
@@ -19,9 +19,46 @@ st.set_page_config(
 )
 
 if "current_collection" not in st.session_state:
-    st.session_state.current_collection = "default"
+    st.session_state.current_collection = "all"
+
+
+def write_asnwer(response: dict):
+    """Writes the answer to the chat message.
+        Args:
+        response (dict): The response from the RAG chain.
+    """
+    project_conf = get_project_conf(response['project_name'])
+    
+    st.markdown(response['answer'])
+
+    with st.expander("📄 Sources"):
+        sources_list = "<table><tr><td><b>Document Name</b></td><td><b>Page Numbers</b></td></tr>"
+
+        for document in response['sources']:
+            if 'Call' == document['document_name']:
+                url = urllib.parse.quote(project_conf.base_path + project_conf.call_file)
+            elif 'Proposal' == document['document_name']:
+                url = urllib.parse.quote(project_conf.base_path + project_conf.proposal_file)
+            elif 'Grant Agreement' == document['document_name']:
+                url = urllib.parse.quote(project_conf.base_path + project_conf.ga_file)
+            else:
+                url = None
+
+            if url is None:
+                sources_list += "<tr><td>" + document['document_name'] + "</td><td> " + \
+                    document['page_numbers'] + "</td></td>"
+            else:
+                sources_list += f"<tr><td><a href=\"file://{url}\" target=\"_blank\">" + \
+                    document['document_name'] + "</td><td>" + \
+                    document['page_numbers'] + " </td></tr>"
+
+        sources_list += "</table>"
+        st.markdown(sources_list, unsafe_allow_html=True)
+
 
 def main():
+    """Main function to run the Streamlit app."""
+
     # Set up logging configuration
     logging.basicConfig(
         level=logging.INFO,
@@ -36,12 +73,12 @@ def main():
     reader = FileReader()
 
     with st.sidebar:
-        st.header("📚 Document Management")
+        st.header("📚 Tool Settings")
 
         # Collection selection
         collections = reader.get_collection_names()
-        coll_names = ["default"]
-        coll_names += collections.keys()
+        coll_names = ["all"]
+        coll_names += PROJECT_LIST
 
         selected_collection = st.selectbox(
             "Select Project",
@@ -52,7 +89,7 @@ def main():
             st.session_state.current_collection = selected_collection
 
         st.divider()
-        
+
         # New collection
         with st.expander("Create New Project", expanded=False):
             new_collection = st.text_input("Project name")
@@ -73,16 +110,16 @@ def main():
                     proposal_file=proposal_file.path,
                     ga_file=ga_file.path,
                 )
-                
+
                 reader.read_project_files(project_conf)
 
         st.divider()
-        
+
         # Collection info
         if st.session_state.current_collection:
             doc_count = collections[st.session_state.current_collection] if st.session_state.current_collection in collections else sum(collections.values())
             st.info(f"Collection: {st.session_state.current_collection} | Documents: {doc_count}")
-        
+
         # Clear conversation
         if st.button("Clear Conversation"):
             st.session_state.messages = []
@@ -94,44 +131,24 @@ def main():
         if "messages" not in st.session_state:
             st.session_state.messages = []
 
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-
         if prompt := st.chat_input("Ask your question..."):
+            for message in st.session_state.messages:
+                with st.chat_message(message["role"]):
+                    if message["role"] == "assistant":
+                        write_asnwer(message["content"])
+                    else:
+                        st.markdown(message["content"])
+    
             st.chat_message("user").markdown(prompt)
             st.session_state.messages.append({"role": "user", "content": prompt})
 
+            project_name = rag_chain.get_working_project(prompt, selected_collection)
+            response = rag_chain.query_project(prompt, project_name)
+
             with st.chat_message("assistant"):
-                project_name, response = rag_chain.query_project(prompt, selected_collection)
-                project_conf = get_project_conf(project_name)
-                st.markdown(response['answer'])
+                write_asnwer(response)
 
-                with st.expander("📄 Sources"):
-                    sources_list = "<table><tr><td><b>Document Name</b></td><td><b>Page Numbers</b></td></tr>"
-
-                    for document in response['sources']:
-                        if 'Call' == document['document_name']:
-                            url = urllib.parse.quote(project_conf.base_path + project_conf.call_file)
-                        elif 'Proposal' == document['document_name']:
-                            url = urllib.parse.quote(project_conf.base_path + project_conf.proposal_file)
-                        elif 'Grant Agreement' == document['document_name']:
-                            url = urllib.parse.quote(project_conf.base_path + project_conf.ga_file)
-                        else:
-                            url = None
-
-                        if url is None:
-                            sources_list += "<tr><td>" + document['document_name'] + "</td><td> " + \
-                                document['page_numbers'] + "</td></td>"
-                        else:
-                            sources_list += f"<tr><td><a href=\"file://{url}\" target=\"_blank\">" + \
-                                document['document_name'] + "</td><td>" + \
-                                document['page_numbers'] + " </td></tr>"
-
-                    sources_list += "</table>"
-                    st.markdown(sources_list, unsafe_allow_html=True)
-
-                st.session_state.messages.append({"role": "assistant", "content": response})
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
 
 if __name__ == "__main__":

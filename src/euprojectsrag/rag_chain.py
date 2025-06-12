@@ -3,7 +3,7 @@
 import os
 import logging
 
-from typing import List
+from typing import List, Dict
 
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -40,7 +40,7 @@ class RAGChain():
         self.logger.info("Using model: %s", self.model)
 
 
-    def reciprocal_rank_fusion(self, results: List[List], k: int = 60):
+    def reciprocal_rank_fusion(self, results: List[List], max_docs: int = 400):
         """Reciprocal Rank Fusion that takes multiple lists of ranked documents and
         an optional parameter k used in the RRF formula.
         Uses document ID as key instead of serializing documents."""
@@ -48,7 +48,6 @@ class RAGChain():
         self.logger.info("Starting reciprocal rank fusion")
         fused_scores = {}
         doc_map = {}
-        max_docs = len(results[0])
 
         for docs in results:
             for rank, doc in enumerate(docs):
@@ -56,7 +55,7 @@ class RAGChain():
                 if doc_id not in fused_scores:
                     fused_scores[doc_id] = 0
                     doc_map[doc_id] = doc
-                fused_scores[doc_id] += 1. / (rank + k)
+                fused_scores[doc_id] += 1. / (rank + 60)
 
         self.logger.info("Reciprocal rank fusion complete, processed %s documents", len(fused_scores))
 
@@ -132,7 +131,6 @@ class RAGChain():
             A list of all sources used, specifying the document name and page number(s) (e.g., "Proposal, p. 4"). If multiple documents are referenced, list them all.
             At the end of the response, include a "Sources" section. In this section, list only the unique page numbers referenced from the proposal.
             Sort them in ascending order and group consecutive or nearby pages (within 2-3 pages apart) into ranges.
-            Use the format: Proposal, pp. 61, 68-70, 79.
 
             Format your response in JSON format and user Markdown formatting for the texts.
             Here an example of what you have to answer:
@@ -221,7 +219,7 @@ class RAGChain():
 
         if project_name is None:
             self.logger.info("No project found with sufficient confidence in the query")
-            return "default"
+            return "all"
         
         self.logger.info(
             "Extraction complete - Working on project name: %s, Confidence: %.2f",
@@ -229,9 +227,31 @@ class RAGChain():
             max_confidence
         )
         return project_name
+    
+
+    def get_working_project(self, user_input: str, project_name: str = "all") -> str:
+        """Get the working project name based on user input.
+        
+        Args:
+            user_input: The question or query from the user
+            project_name: The name of the project to query
+            
+        Returns:
+            str: The name of the project to work with"""
+
+        self.logger.info("Extracting project name from user input")
+        if project_name == "all":
+            project_name = self.project_name_extraction(user_input)
+
+        if project_name == "all":
+            self.logger.info("No project found in the query, stopping processing")
+            return None
+
+        self.logger.info("Project name extraction complete, proceeding with event processing")
+        return project_name
 
 
-    def query_project(self, user_input: str, project_name: "default") -> str:
+    def query_project(self, user_input: str, project_name: str) -> Dict[str, str]:
         """Query the project with the given question.
             Args:
             user_input: The question or query from the user
@@ -242,13 +262,7 @@ class RAGChain():
         self.logger.info("Processing user query")
         self.logger.debug("Raw input: %s", user_input)
 
-        if project_name == "default":
-            project_name = self.project_name_extraction(user_input)
-
-        if project_name == "default":
-            self.logger.info("No project found in the query, stopping processing",)
-            return None
-
         self.logger.info("Gate check passed, proceeding with event processing")
         query_result = self.run_rag(project_name, user_input, self.memory)
-        return project_name, query_result
+        query_result["project_name"] = project_name
+        return query_result

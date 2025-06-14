@@ -173,7 +173,7 @@ class RAGChain():
         if memory is not None:
             self.logger.info("Adding user question and AI response to memory")
             memory.chat_memory.add_user_message(question)
-            memory.chat_memory.add_ai_message(result['answer'])
+            memory.chat_memory.add_ai_message(result.answer)
 
         return result
 
@@ -285,7 +285,7 @@ class RAGChain():
             {history}
 
             Please provide:
-            A clear, plain-text answer (no markdown formatting).
+            A clear answer in Markdown formatting.
             A list of all sources used, specifying the document name and page number(s) (e.g., "Proposal, p. 4"). If multiple documents are referenced, list them all.
             At the end of the response, include a "Sources" section. In this section, list only the unique page numbers referenced from the proposal.
             Sort them in ascending order and group consecutive or nearby pages (within 2-3 pages apart) into ranges.
@@ -296,11 +296,11 @@ class RAGChain():
 
         self.logger.info("Gate check passed, proceeding with event processing")
         query_result = self.run_rag(project_name, prompt_template, user_input, self.memory)
-        query_result['sources'] = [
+        query_result.sources = [
             {
                 'document_name': project_name + " " + source['document_name'],
                 'page_numbers': source['page_numbers']
-            } for source in query_result['sources']
+            } for source in query_result.sources
         ]
         return query_result
 
@@ -403,7 +403,7 @@ class RAGChain():
             The information from each project is provided below:
             {projects_info}
 
-            Provide a clear, concise answer that synthesizes the information from all projects.
+            Provide a clear, concise answer in Markdown format that synthesizes the information from all projects.
             If there are conflicting pieces of information, explain the differences and provide a balanced view.
 
             Output format:

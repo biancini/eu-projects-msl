@@ -1,1 +1,1 @@
-{"test_id": 1, "input": "how many KPIs do SPECTRO have?", "ideal": "SPECTRO has a total of 22 Key Performance Indicators (KPIs).", "pages": "Proposal 98-99\nGrant Agreement 81-82"}
+{"test_id": 1, "project_name": "SPECTRO", "input": "how many KPIs do SPECTRO have?", "ideal": "SPECTRO has a total of 22 Key Performance Indicators (KPIs).", "pages": "Proposal 98-99\nGrant Agreement 81-82"}

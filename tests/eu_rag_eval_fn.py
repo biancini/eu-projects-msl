@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from evals import Eval
 from dotenv import load_dotenv
 
-from ..src.euprojectsrag.rag_chain import RAGChain
+from euprojectsrag.rag_chain import RAGChain
 
 
 class TestSampleExecution(BaseModel):
@@ -44,7 +44,8 @@ class LLMEval(Eval):
         """
         rag_chain = RAGChain()
         query = sample.get("input", "")
-        actual_answer = rag_chain.query_project(query)
+        project_name = rag_chain.project_name_extraction(query)[0][0]
+        actual_answer = rag_chain.query_project(query, project_name)
         expected_answer = sample.get("ideal", "")
         pages = sample.get("pages", "")
 

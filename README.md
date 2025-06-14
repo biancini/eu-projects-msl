@@ -69,7 +69,7 @@ This module supports evaluation using the OpenAI Evals framework. Test cases are
 To execute the tests, use the following command from the root directory of your project:
 
 ```bash
-PYTHONPATH=".:tests" oaieval eu_rag euprojects-eval --registry-path test_evals
+PYTHONPATH=".:src:tests" oaieval eu_rag euprojects-eval --registry_path tests
 ```
 
 Explanation:

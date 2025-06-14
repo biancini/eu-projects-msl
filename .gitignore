@@ -91,9 +91,6 @@ target/
 # Exclude virtual environment
 .venv/
 
-# Exclude pyproject.toml
-pyproject.toml
-
 # Exclude uv.lock
 uv.lock
 

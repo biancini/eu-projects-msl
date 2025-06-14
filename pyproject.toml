@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name            = "euprojectsrag"
+version         = "2.0.0"
+description     = "RAG utilities for analysing EU project PDFs"
+authors         = [{name = "Andrea Biancini", email = "andrea.biancin@gmail.com"}]
+license         = {text = "MIT"}
+readme          = "README.md"
+requires-python = ">=3.10"
+dependencies    = [
+  "python-dotenv>=1.0",
+  "pydantic>=2.7",
+  "langchain>=0.2",
+  "langchain-openai>=0.1",
+  "langchain-chroma>=0.1",
+  "openai>=1.30",
+  "chromadb>=0.5",
+  "pymupdf==1.*",
+  "streamlit>=1.35",
+  "termcolor>=2.4",
+]
+
+[project.optional-dependencies]
+dev   = ["black", "ruff", "mypy", "pytest", "pytest-cov", "pre-commit"]
+docs  = ["mkdocs-material"]
+
+[project.scripts]
+eu-projects-rag = "euprojectsrag.cli:main"

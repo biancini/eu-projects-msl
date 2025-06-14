@@ -16,10 +16,10 @@ from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI
 
-from euprojectsrag.data_models import ProjectExtraction
-from euprojectsrag.file_reader import FileReader
-from euprojectsrag.data_models import ProjectData
-from euprojectsrag.configurations import  get_project_conf
+from .data_models import ProjectExtraction, PROJECT_LIST
+from .file_reader import FileReader
+from .data_models import ProjectData
+from .configurations import  get_project_conf
 
 
 # pylint: disable=no-member
@@ -57,11 +57,12 @@ class RAGChain():
                     doc_map[doc_id] = doc
                 fused_scores[doc_id] += 1. / (rank + 60)
 
-        self.logger.info("Reciprocal rank fusion complete, processed %s documents", len(fused_scores))
+        self.logger.info("Reciprocal rank fusion complete, processed %s documents",
+                         len(fused_scores))
 
         fused_scores = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
         if len(fused_scores) > max_docs:
-            self.logger.info("More documents found than max_docs (%s), truncating results", max_docs)
+            self.logger.info("Documents exceed max_docs (%s), truncating results", max_docs)
             fused_scores = fused_scores[:max_docs]
 
         reranked_results = [
@@ -112,7 +113,7 @@ class RAGChain():
             | (lambda x: x.split("\n"))
         )
 
-        retrieval_chain_rag_fusion = generate_queries | retriever.map() | self.reciprocal_rank_fusion
+        retrieval_chain_rag = generate_queries | retriever.map() | self.reciprocal_rank_fusion
 
         template = """You are a helpful assistant with access to the following context information:
             - Project Data: {context_project_data}
@@ -154,7 +155,7 @@ class RAGChain():
         rag_chain = (
             {
                 "context_project_data": lambda _: context_project_data,
-                "context_project_docs": retrieval_chain_rag_fusion,
+                "context_project_docs": retrieval_chain_rag,
                 "question": RunnablePassthrough(),
                 "history": RunnableLambda(lambda _: memory.buffer)
             }
@@ -171,7 +172,7 @@ class RAGChain():
         memory.chat_memory.add_ai_message(result['answer'])
 
         return result
-    
+
 
     def project_name_extraction(self, user_input: str) -> ProjectExtraction:
         """First LLM call to determine which project the user is asking about"""
@@ -191,8 +192,9 @@ class RAGChain():
             messages=[
                 {
                     "role": "system",
-                    "content": """Analyze the query text history and answer if the query is related to a project.
-                        Possible projects are SPECTRO, EMAI4EU, RESCHIP4EU and ACHIEVE.
+                    "content": f"""Analyze the query text history and answer if the \
+                        query is related to a project.
+                        Possible projects are these: {PROJECT_LIST}.
                         Return a list of the project names and for each project a confidence score between 0 and 1.
                         """,
                 },
@@ -220,14 +222,14 @@ class RAGChain():
         if project_name is None:
             self.logger.info("No project found with sufficient confidence in the query")
             return "all"
-        
+
         self.logger.info(
             "Extraction complete - Working on project name: %s, Confidence: %.2f",
             project_name,
             max_confidence
         )
         return project_name
-    
+
 
     def get_working_project(self, user_input: str, project_name: str = "all") -> str:
         """Get the working project name based on user input.

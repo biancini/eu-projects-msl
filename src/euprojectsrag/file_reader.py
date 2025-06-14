@@ -13,14 +13,14 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 
-from src.euprojectsrag.configurations import ProjetFileData
+from .configurations import ProjetFileData
 
 class FileReader():
     """Class to handle reading and processing PDF files for EU projects.
     This class provides methods to extract text from PDF files, split the text into
     manageable chunks, and store the processed data in a Chroma database for further
     retrieval and analysis."""
-    
+
     def __init__(self):
         logging.getLogger("pdfminer").setLevel(logging.ERROR)
         self.logger = logging.getLogger(__name__)
@@ -62,7 +62,11 @@ class FileReader():
         return pages
 
 
-    def get_documents_from_pdf(self, file_name: str, doc_type: str, project_name: str) -> List[Document]:
+    def get_documents_from_pdf(
+            self,
+            file_name: str,
+            doc_type: str,
+            project_name: str) -> List[Document]:
         """Get documents from a PDF file.
 
         Args:
@@ -90,7 +94,7 @@ class FileReader():
 
         self.logger.info("Extracted %d documents from %s", len(documents), file_name)
         return documents
-    
+
     def get_collection_names(self) -> Dict[str, int]:
         """Get the names of all collections in the Chroma database.
         
@@ -109,6 +113,12 @@ class FileReader():
 
 
     def read_project_files(self, project_conf: ProjetFileData) -> List[Document]:
+        """Read and process project files including call, proposal, and GA documents.
+        Args:
+            project_conf: Project configuration containing file paths
+        Returns:
+            List of processed documents
+        """
         self.logger.info("Reading call file for project %s", project_conf.project_name)
         call_docs = self.get_documents_from_pdf(
             project_conf.base_path + project_conf.call_file,

@@ -1,12 +1,11 @@
 """Configuration settings and project data for EU projects."""
 
-from src.euprojectsrag.data_models import ProjetFileData
+from .data_models import ProjetFileData
 
 BASEPATH = (
     "/Users/andrea.biancinigmail.com/Library/CloudStorage/OneDrive-Personale/"
     "Documenti/work/eit digital/"
 )
-
 
 spectro_conf = ProjetFileData(
     project_name="SPECTRO",

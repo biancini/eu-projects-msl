@@ -12,7 +12,7 @@ class ProjectExtraction(BaseModel):
     """Data model for extracting project-related information from user queries."""
 
     question: str = Field(description="Question to be used as a query to the model")
-    project_name:  List[Literal["SPECTRO", "EMAI4EU", "RESCHIP4EU", "ACHIEVE"]] = Field(
+    project_name:  List[Literal[tuple(PROJECT_LIST)]] = Field(
         description="Name of the project the user is asking about"
     )
 

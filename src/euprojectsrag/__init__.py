@@ -1,6 +1,9 @@
 """euprojectsrag"""
 
 # Import necessary modules or classes here
+from .rag_chain import RAGChain
+from .configurations import get_project_conf
+
 __all__ = [
     "RAGChain",
     "get_project_conf",

@@ -22,8 +22,6 @@ from .data_models import ProjectData, ProjectExtraction, LLMBasicAnswer, LLMAnsw
 from .configurations import  get_project_conf
 
 
-# pylint: disable=no-member
-
 class RAGChain():
     """Class to handle the RAG chain for answering questions about EU projects."""
 
@@ -172,8 +170,9 @@ class RAGChain():
 
         if memory:
             self.logger.info("Adding user question and AI response to memory")
-            self.memory.chat_memory.add_user_message(question)
-            self.memory.chat_memory.add_ai_message(result.answer)
+            self.memory.add_messages(
+                [HumanMessage(content=question), result.answer]
+            )
 
         return result
 
@@ -191,7 +190,7 @@ class RAGChain():
 
         human_messages = [
             msg.content
-            for msg in self.memory.chat_memory.messages
+            for msg in self.memory.buffer_as_messages()
             if isinstance(msg, HumanMessage)
         ]
         human_messages.append(user_input)

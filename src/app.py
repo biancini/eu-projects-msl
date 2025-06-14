@@ -72,14 +72,16 @@ def main():
     st.title("🤖 EU Projects Answering Bot")
     st.markdown("Chat with your documents using AI-powered retrieval and generation")
 
-    rag_chain = RAGChain()
-    reader = FileReader()
+    if "rag_chain" not in st.session_state:
+        st.session_state.rag_chain = RAGChain()
+    if "reader" not in st.session_state:    
+        st.session_state.reader = FileReader()
 
     with st.sidebar:
         st.header("📚 Tool Settings")
 
         # Collection selection
-        collections = reader.get_collection_names()
+        collections = st.session_state.reader.get_collection_names()
         coll_names = ["all"]
         coll_names += PROJECT_LIST
 
@@ -122,7 +124,7 @@ def main():
                     ga_file=ga_file.path,
                 )
 
-                reader.read_project_files(project_conf)
+                st.session_state.reader.read_project_files(project_conf)
 
         st.divider()
 
@@ -156,15 +158,15 @@ def main():
             st.session_state.messages.append({"role": "user", "content": prompt})
 
             if selected_collection != "all":
-                response = rag_chain.query_project(prompt, selected_collection)
+                response = st.session_state.rag_chain.query_project(prompt, selected_collection)
             else:
-                project_names = rag_chain.project_name_extraction(prompt)
+                project_names = st.session_state.rag_chain.project_name_extraction(prompt)
                 if len(project_names) == 0:
                     response = "No project found for the given prompt."
                 elif len(project_names) == 1:
-                    response = rag_chain.query_project(prompt, project_names[0][0])
+                    response = st.session_state.rag_chain.query_project(prompt, project_names[0][0])
                 else:
-                    response = rag_chain.query_projects(prompt, project_names)
+                    response = st.session_state.rag_chain.query_projects(prompt, project_names)
             
             with st.chat_message("assistant"):
                 write_answer(response)

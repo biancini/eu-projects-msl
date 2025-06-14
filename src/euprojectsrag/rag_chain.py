@@ -106,14 +106,14 @@ class RAGChain():
             project_name: str,
             prompt_template: str,
             question: str,
-            memory: ConversationBufferMemory = None) -> str:
+            memory: bool = False) -> str:
         """Run RAG chain to answer questions about EU project documents.
         
         Args:
             project_name: Name of the project to query
             prompt_template: Template for the prompt to be used in the LLM
             question: Question to ask about the project
-            memory: Memory object to store conversation history
+            memory: Whether to use memory for the conversation history
             
         Returns:
             str: Answer to the question based on project documents
@@ -160,8 +160,8 @@ class RAGChain():
             "context_project_docs": retrieval_chain_rag,
             "question": lambda _: question
         }
-        if memory is not None:
-            rag_params["history"] = RunnableLambda(lambda _: memory.buffer)
+        if memory:
+            rag_params["history"] = RunnableLambda(lambda _: self.memory.buffer)
 
         self.logger.info("Invoke RAG chain")
         result = self.call_llm(
@@ -170,10 +170,10 @@ class RAGChain():
             response_type=LLMAnswerWithSources,
         )
 
-        if memory is not None:
+        if memory:
             self.logger.info("Adding user question and AI response to memory")
-            memory.chat_memory.add_user_message(question)
-            memory.chat_memory.add_ai_message(result.answer)
+            self.memory.chat_memory.add_user_message(question)
+            self.memory.chat_memory.add_ai_message(result.answer)
 
         return result
 
@@ -295,13 +295,14 @@ class RAGChain():
         """
 
         self.logger.info("Gate check passed, proceeding with event processing")
-        query_result = self.run_rag(project_name, prompt_template, user_input, self.memory)
+        query_result = self.run_rag(project_name, prompt_template, user_input, True)
         query_result.sources = [
             {
                 'document_name': project_name + " " + source['document_name'],
                 'page_numbers': source['page_numbers']
             } for source in query_result.sources
         ]
+
         return query_result
 
 

@@ -9,7 +9,7 @@ import streamlit as st
 from euprojectsrag.rag_chain import RAGChain
 from euprojectsrag.file_reader import FileReader
 from euprojectsrag.configurations import ProjetFileData, get_project_conf
-from euprojectsrag.data_models import PROJECT_LIST
+from euprojectsrag.data_models import PROJECT_LIST, LLMBasicAnswer, LLMAnswerWithSources
 
 st.set_page_config(
     page_title="RAG Chat System",
@@ -22,18 +22,19 @@ if "current_collection" not in st.session_state:
     st.session_state.current_collection = "all"
 
 
-def write_answer(response: dict):
+def write_answer(response: LLMBasicAnswer | LLMAnswerWithSources):
     """Writes the answer to the chat message.
-        Args:
-        response (dict): The response from the RAG chain.
-    """
-    st.markdown(response['answer'])
 
-    if 'sources' in response and len(response['sources']) > 0:
+        Args:
+        response (LLMBasicAnswer | LLMAnswerWithSources): The response from the RAGChain, which can be either a basic answer or an answer with sources.
+    """
+    st.markdown(response.answer)
+
+    if isinstance(response, LLMAnswerWithSources):
         with st.expander("📄 Sources"):
             sources_list = "<table><tr><td><b>Document Name</b></td><td><b>Page Numbers</b></td></tr>"
 
-            for document in response['sources']:
+            for document in response.sources:
                 project_name, doc_name = document['document_name'].split(" ", 1)
                 project_conf = get_project_conf(project_name)
 

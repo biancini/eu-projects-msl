@@ -2,22 +2,23 @@
 
 import os
 import logging
-import json
 
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Type
 
 from dotenv import load_dotenv
+
+from pydantic import BaseModel
 
 from langchain.schema import HumanMessage
 from langchain.prompts import ChatPromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.schema.runnable import RunnableLambda
-from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
+from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from langchain_openai import ChatOpenAI
 
 from .data_models import PROJECT_LIST
 from .file_reader import FileReader
-from .data_models import ProjectData
+from .data_models import ProjectData, ProjectExtraction, LLMBasicAnswer, LLMAnswerWithSources
 from .configurations import  get_project_conf
 
 
@@ -76,32 +77,26 @@ class RAGChain():
             self,
             rag_params: Dict,
             prompt_template: str,
-            json_answer: bool = False) -> json:
+            response_type: Type[BaseModel] = LLMBasicAnswer) -> BaseModel:
         """Call the LLM with the given parameters and prompt.
         
         Args:
             rag_params: Parameters for the RAG chain
             prompt: Prompt template to be used in the LLM
             question: Question to ask the LLM
-            json_answer: Whether to return the answer in JSON format
+            response_type: Type of the response to be returned, if None, returns a string
 
         Returns:
-            json: The answer from the LLM, either in JSON or string format
+            BaseModel: The response from the LLM, formatted as specified by response_type
         """
-
+        
+        parser = PydanticOutputParser(pydantic_object=response_type)
         prompt = ChatPromptTemplate.from_template(prompt_template)
-        rag_chain = rag_params | prompt | self.llm
-
-        if json_answer:
-            rag_chain = rag_chain | JsonOutputParser()
-        else:
-            rag_chain = rag_chain | StrOutputParser()
-
+        prompt = prompt.partial(format_instructions=parser.get_format_instructions())
+        
         self.logger.info("Send call to LLM")
+        rag_chain = rag_params | prompt | self.llm | parser
         result = rag_chain.invoke("")
-
-        if not json_answer:
-            result = {'answer': result}
 
         return result
 
@@ -172,7 +167,7 @@ class RAGChain():
         result = self.call_llm(
             rag_params,
             prompt_template,
-            json_answer=True
+            response_type=LLMAnswerWithSources,
         )
 
         if memory is not None:
@@ -201,33 +196,36 @@ class RAGChain():
         ]
         human_messages.append(user_input)
 
-        prompt_template = """Analyze the query text history and answer if the \
-            query is related to a project.
-            Possible projects are these: {PROJECT_LIST}.
-            Return a list of the project names and for each project a confidence score between 0 and 1.
-            {content}.
+        prompt_template = """You are a smart assistant that helps identify which research projects are relevant to a given user query.
 
-            Format your response in JSON format.
-            Here an example of what you have to answer:
-            {{
-            'project_names': """ + str(PROJECT_LIST) +""",
-            'confidence_score': """ + str([8.0 for _ in PROJECT_LIST]) + """,
-            }}
+            Here is a list of possible project names: {PROJECT_LIST}
+
+            Your task is to analyze the user query and return:
+            - `project_names`: the list of project names from the list above that are clearly mentioned or strongly implied
+            - `confidence_scores`: for each project listed, return a confidence score between 0.0 (not confident) and 10.0 (very confident)
+
+            Only include projects if their presence is explicitly mentioned or reasonably inferable. 
+            Be precise and avoid guessing.
+
+            User query: {query}
+
+            Output format:
+            {format_instructions}
             """
 
         result = self.call_llm(
             {
-                "PROJECT_LIST": lambda _: str(PROJECT_LIST),
-                "content": lambda _: '\n'.join(human_messages)
+                "PROJECT_LIST": lambda _: ", ".join(PROJECT_LIST),
+                "query": lambda _: '\n'.join(human_messages)
             },
             prompt_template,
-            json_answer=True
+            response_type=ProjectExtraction,
         )
 
         projects = [
-            (project, confidence)for project, confidence
-            in zip(result['project_names'], result['confidence_score'])
-            if confidence >= 0.7
+            (project, confidence) for project, confidence
+            in zip(result.project_names, result.confidence_scores)
+            if confidence >= 0.5
         ]
 
         projects = sorted(projects, key=lambda x: x[1], reverse=True)
@@ -292,15 +290,8 @@ class RAGChain():
             At the end of the response, include a "Sources" section. In this section, list only the unique page numbers referenced from the proposal.
             Sort them in ascending order and group consecutive or nearby pages (within 2-3 pages apart) into ranges.
 
-            Format your response in JSON format and user Markdown formatting for the texts.
-            Here an example of what you have to answer:
-            {{
-            'answer': 'Your detailed answer here',
-            'sources': [
-                {{'document_name': 'Call', 'page_numbers': '9, 10, 12-15'}},
-                {{'document_name': 'Proposal', 'page_numbers': '10-14, 25, 32-34'}},
-                {{'document_name': 'Grant Agreement', 'page_numbers': '1, 18-23'}}
-            ]}}
+            Output format:
+            {format_instructions}
         """
 
         self.logger.info("Gate check passed, proceeding with event processing")
@@ -349,15 +340,8 @@ class RAGChain():
             At the end of the response, include a "Sources" section. In this section, list only the unique page numbers referenced from the proposal.
             Sort them in ascending order and group consecutive or nearby pages (within 2-3 pages apart) into ranges.
 
-            Format your response in JSON format and user Markdown formatting for the texts.
-            Here an example of what you have to answer:
-            {{
-            'answer': 'Your detailed answer here',
-            'sources': [
-                {{'document_name': 'Call', 'page_numbers': '9, 10, 12-15'}},
-                {{'document_name': 'Proposal', 'page_numbers': '10-14, 25, 32-34'}},
-                {{'document_name': 'Grant Agreement', 'page_numbers': '1, 18-23'}}
-            ]}}
+            Output format:
+            {format_instructions}
         """
 
         result = self.call_llm(
@@ -366,7 +350,7 @@ class RAGChain():
                 "question": lambda _: user_input,
             },
             prompt_template,
-            json_answer=True
+            response_type=LLMAnswerWithSources,
         )
         return result
 
@@ -385,25 +369,25 @@ class RAGChain():
         self.logger.debug("Raw input: %s", user_input)
 
         query_results = {}
-        sources = {}
+        sources = []
 
         for project_name in [p[0] for p in project_names]:
             self.logger.info("Processing project: %s", project_name)
 
             generated_query = self.generate_query_per_project(user_input, project_name)
-            for source in generated_query['sources']:
-                sources[project_name + " " + source['document_name']] = source['page_numbers']
+            for source in generated_query.sources:
+                sources.append({
+                    'document_name': project_name + " " + source['document_name'],
+                    'page_numbers': source['page_numbers']
+                })
                 
-            prompt_template = generated_query['answer'] + """
-            
-                Format your response in JSON format and user Markdown formatting for the texts.
-                Here an example of what you have to answer:
-                {{
-                'answer': 'Your answer here',
-                }}"""
+            prompt_template = generated_query.answer + """
+
+                Output format:
+                {format_instructions}"""
 
             result = self.run_rag(project_name, prompt_template, user_input)
-            query_results[project_name] = result["answer"]
+            query_results[project_name] = result.answer
 
         self.logger.info("Obtained query results for all projects")
 
@@ -422,11 +406,8 @@ class RAGChain():
             Provide a clear, concise answer that synthesizes the information from all projects.
             If there are conflicting pieces of information, explain the differences and provide a balanced view.
 
-            Format your response in JSON format and user Markdown formatting for the texts.
-            Here an example of what you have to answer:
-            {{
-            'answer': 'Your answer here',
-            }}
+            Output format:
+            {format_instructions}
         """
 
         result = self.call_llm(
@@ -436,8 +417,7 @@ class RAGChain():
                 "question": lambda _: user_input
             },
             prompt,
-            json_answer=True
+            response_type=LLMBasicAnswer,
         )
 
-        result['sources'] = sources
-        return result
+        return LLMAnswerWithSources(answer=result.answer, sources=sources)

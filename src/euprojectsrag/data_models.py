@@ -8,16 +8,6 @@ PROJECT_LIST = [
     "SPECTRO", "EMAI4EU", "RESCHIP4EU", "ACHIEVE",
 ]
 
-class ProjectExtraction(BaseModel):
-    """Data model for extracting project-related information from user queries."""
-
-    question: str = Field(description="Question to be used as a query to the model")
-    project_name:  List[Literal[tuple(PROJECT_LIST)]] = Field(
-        description="Name of the project the user is asking about"
-    )
-
-    confidence_score: List[float] = Field(description="Confidence score between 0 and 1")
-
 class ProjetFileData(BaseModel):
     """Data model containing file paths for project-related file documents."""
     project_name: str = Field(description="Name of the project")

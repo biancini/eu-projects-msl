@@ -2,10 +2,10 @@
 
 import os
 import logging
+import json
 
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
-from openai import OpenAI
 from dotenv import load_dotenv
 
 from langchain.schema import HumanMessage
@@ -13,10 +13,9 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.schema.runnable import RunnableLambda
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
-from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI
 
-from .data_models import ProjectExtraction, PROJECT_LIST
+from .data_models import PROJECT_LIST
 from .file_reader import FileReader
 from .data_models import ProjectData
 from .configurations import  get_project_conf
@@ -35,8 +34,8 @@ class RAGChain():
         load_dotenv(override=True)
         self.memory = ConversationBufferMemory(return_messages=True)
 
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.model = os.getenv('MODEL')
+        self.llm = ChatOpenAI(model_name=self.model, temperature=0)
         self.logger.info("Using model: %s", self.model)
 
 
@@ -73,12 +72,53 @@ class RAGChain():
         return reranked_results
 
 
-    def run_rag(self, project_name: str, question: str, memory: ConversationBufferMemory) -> str:
+    def call_llm(
+            self,
+            rag_params: Dict,
+            prompt_template: str,
+            json_answer: bool = False) -> json:
+        """Call the LLM with the given parameters and prompt.
+        
+        Args:
+            rag_params: Parameters for the RAG chain
+            prompt: Prompt template to be used in the LLM
+            question: Question to ask the LLM
+            json_answer: Whether to return the answer in JSON format
+
+        Returns:
+            json: The answer from the LLM, either in JSON or string format
+        """
+
+        prompt = ChatPromptTemplate.from_template(prompt_template)
+        rag_chain = rag_params | prompt | self.llm
+
+        if json_answer:
+            rag_chain = rag_chain | JsonOutputParser()
+        else:
+            rag_chain = rag_chain | StrOutputParser()
+
+        self.logger.info("Send call to LLM")
+        result = rag_chain.invoke("")
+
+        if not json_answer:
+            result = {'answer': result}
+
+        return result
+
+
+    def run_rag(
+            self,
+            project_name: str,
+            prompt_template: str,
+            question: str,
+            memory: ConversationBufferMemory = None) -> str:
         """Run RAG chain to answer questions about EU project documents.
         
         Args:
             project_name: Name of the project to query
+            prompt_template: Template for the prompt to be used in the LLM
             question: Question to ask about the project
+            memory: Memory object to store conversation history
             
         Returns:
             str: Answer to the question based on project documents
@@ -105,17 +145,136 @@ class RAGChain():
             Output (4 queries):
         """)
 
-        self.logger.info("Generate queries")
-        generate_queries = (
+        self.logger.info("Creating RAG chain with prompt and LLM")
+        retrieval_chain_rag = (
             prompt_rag_fusion
-            | ChatOpenAI(model_name=os.getenv('MODEL'), temperature=0)
+            | self.llm
             | StrOutputParser()
             | (lambda x: x.split("\n"))
+            | retriever.map()
+            | self.reciprocal_rank_fusion
         )
 
-        retrieval_chain_rag = generate_queries | retriever.map() | self.reciprocal_rank_fusion
+        context_project_data = {
+            "project_name": project_data.project_name,
+            "start_date": project_data.start_date,
+        }
 
-        template = """You are a helpful assistant with access to the following context information:
+        rag_params = {
+            "context_project_data": lambda _: context_project_data,
+            "context_project_docs": retrieval_chain_rag,
+            "question": lambda _: question
+        }
+        if memory is not None:
+            rag_params["history"] = RunnableLambda(lambda _: memory.buffer)
+
+        self.logger.info("Invoke RAG chain")
+        result = self.call_llm(
+            rag_params,
+            prompt_template,
+            json_answer=True
+        )
+
+        if memory is not None:
+            self.logger.info("Adding user question and AI response to memory")
+            memory.chat_memory.add_user_message(question)
+            memory.chat_memory.add_ai_message(result['answer'])
+
+        return result
+
+
+    def project_name_extraction(self, user_input: str) -> List[Tuple[str, float]]:
+        """LLM call to determine which project the user is asking about.
+        Args:
+            user_input: The question or query from the user
+        Returns:
+            str: The list of project names extracted from the user input
+        """
+
+        self.logger.info("Starting event extraction analysis")
+        self.logger.debug("Input text: %s", user_input)
+
+        human_messages = [
+            msg.content
+            for msg in self.memory.chat_memory.messages
+            if isinstance(msg, HumanMessage)
+        ]
+        human_messages.append(user_input)
+
+        prompt_template = """Analyze the query text history and answer if the \
+            query is related to a project.
+            Possible projects are these: {PROJECT_LIST}.
+            Return a list of the project names and for each project a confidence score between 0 and 1.
+            {content}.
+
+            Format your response in JSON format.
+            Here an example of what you have to answer:
+            {{
+            'project_names': """ + str(PROJECT_LIST) +""",
+            'confidence_score': """ + str([8.0 for _ in PROJECT_LIST]) + """,
+            }}
+            """
+
+        result = self.call_llm(
+            {
+                "PROJECT_LIST": lambda _: str(PROJECT_LIST),
+                "content": lambda _: '\n'.join(human_messages)
+            },
+            prompt_template,
+            json_answer=True
+        )
+
+        projects = [
+            (project, confidence)for project, confidence
+            in zip(result['project_names'], result['confidence_score'])
+            if confidence >= 0.7
+        ]
+
+        projects = sorted(projects, key=lambda x: x[1], reverse=True)
+        if len(projects) == 0:
+            self.logger.info("No project found with sufficient confidence in the query")
+            return [("all", 1.0)]
+
+        self.logger.info("Extracted projecs: %s", projects)
+        return projects
+
+
+    def get_working_project(self, user_input: str, project_name: str = "all") -> str:
+        """Get the working project name based on user input.
+        
+        Args:
+            user_input: The question or query from the user
+            project_name: The name of the project to query
+            
+        Returns:
+            str: The name of the project to work with"""
+
+        self.logger.info("Extracting project name from user input")
+        if project_name == "all":
+            project_name = self.project_name_extraction(user_input)[0][0]
+
+        if project_name == "all":
+            self.logger.info("No project found in the query, stopping processing")
+            return None
+
+        self.logger.info("Project name extraction complete, proceeding with event processing")
+        return project_name
+
+
+    def query_project(self, user_input: str, project_name: str) -> Dict[str, str]:
+        """Query the project with the given question.
+
+        Args:
+            user_input: The question or query from the user
+            project_name: The name of the project to query
+        
+        Returns:           
+            str: The answer to the user's question based on the project documents"""
+
+        self.logger.info("Processing user query")
+        self.logger.debug("Raw input: %s", user_input)
+
+        prompt_template = """You are a helpful assistant with access to the following context information:
             - Project Data: {context_project_data}
             - Project Documents: {context_project_docs}
 
@@ -136,7 +295,7 @@ class RAGChain():
             Format your response in JSON format and user Markdown formatting for the texts.
             Here an example of what you have to answer:
             {{
-            'asnwer': 'Your detailed answer here',
+            'answer': 'Your detailed answer here',
             'sources': [
                 {{'document_name': 'Call', 'page_numbers': '9, 10, 12-15'}},
                 {{'document_name': 'Proposal', 'page_numbers': '10-14, 25, 32-34'}},
@@ -144,127 +303,141 @@ class RAGChain():
             ]}}
         """
 
-        prompt = ChatPromptTemplate.from_template(template)
-        llm = ChatOpenAI(model_name=os.getenv('MODEL'), temperature=0)
-
-        context_project_data = {
-            "project_name": project_data.project_name,
-            "start_date": project_data.start_date,
-        }
-
-        rag_chain = (
+        self.logger.info("Gate check passed, proceeding with event processing")
+        query_result = self.run_rag(project_name, prompt_template, user_input, self.memory)
+        query_result['sources'] = [
             {
-                "context_project_data": lambda _: context_project_data,
-                "context_project_docs": retrieval_chain_rag,
-                "question": RunnablePassthrough(),
-                "history": RunnableLambda(lambda _: memory.buffer)
-            }
-            | prompt
-            | llm
-            | JsonOutputParser()
-        )
-
-        self.logger.info("Invoke RAG chain")
-        result = rag_chain.invoke(question)
-
-        self.logger.info("Adding user question and AI response to memory")
-        memory.chat_memory.add_user_message(question)
-        memory.chat_memory.add_ai_message(result['answer'])
-
-        return result
-
-
-    def project_name_extraction(self, user_input: str) -> ProjectExtraction:
-        """First LLM call to determine which project the user is asking about"""
-
-        self.logger.info("Starting event extraction analysis")
-        self.logger.debug("Input text: %s", user_input)
-
-        human_messages = [
-            msg.content
-            for msg in self.memory.chat_memory.messages
-            if isinstance(msg, HumanMessage)
+                'document_name': project_name + " " + source['document_name'],
+                'page_numbers': source['page_numbers']
+            } for source in query_result['sources']
         ]
-        human_messages.append(user_input)
-
-        completion = self.client.beta.chat.completions.parse(
-            model=self.model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": f"""Analyze the query text history and answer if the \
-                        query is related to a project.
-                        Possible projects are these: {PROJECT_LIST}.
-                        Return a list of the project names and for each project a confidence score between 0 and 1.
-                        """,
-                },
-                {
-                    "role": "user",
-                    "content": '\n'.join(human_messages)
-                },
-            ],
-            response_format=ProjectExtraction,
-        )
-
-        max_confidence = 0
-        project_name = None
-        result = completion.choices[0].message.parsed
-        for (project, confidence) in zip(result.project_name, result.confidence_score):
-            self.logger.info("Project found: %s with confidence %.2f", project, confidence)
-
-            if (
-                confidence >= 0.7
-                and confidence > max_confidence
-                ):
-                max_confidence = confidence
-                project_name = project
-
-        if project_name is None:
-            self.logger.info("No project found with sufficient confidence in the query")
-            return "all"
-
-        self.logger.info(
-            "Extraction complete - Working on project name: %s, Confidence: %.2f",
-            project_name,
-            max_confidence
-        )
-        return project_name
+        return query_result
 
 
-    def get_working_project(self, user_input: str, project_name: str = "all") -> str:
-        """Get the working project name based on user input.
+    def generate_query_per_project(self, user_input: str, project_name: str) -> str:
+        """Generate a list of project names based on the user input.
         
         Args:
             user_input: The question or query from the user
             project_name: The name of the project to query
             
         Returns:
-            str: The name of the project to work with"""
+            str: The query to be used to retrieve information from the project documents
+        """
 
-        self.logger.info("Extracting project name from user input")
-        if project_name == "all":
-            project_name = self.project_name_extraction(user_input)
+        self.logger.info("Extracting answer about project %s", project_name)
+        prompt_template = """
+            You have to answer this question from the user: {question}
+            To answer it, you must retrieve information *exclusively* from the {project_name} project documents and data.
 
-        if project_name == "all":
-            self.logger.info("No project found in the query, stopping processing")
-            return None
+            Generate a query prompt that retrieves the specific information needed to answer the question,
+            focused strictly on the {project_name} project.
+            Do not include any references to other projects or comparative elements.
 
-        self.logger.info("Project name extraction complete, proceeding with event processing")
-        return project_name
+            The beginning of the prompt should be exactly:
+            "You are a helpful assistant with access to the following context information:
+            - Project Data: {{context_project_data}}
+            - Project Documents: {{context_project_docs}}
+            - Original Question: {{question}}"
+
+            Only use the information provided in the first two variables.
+            Ignore any other potential knowledge, including data from other projects.
+
+            Please provide:
+            The generated prompt query, and must be specific, concise, and limited to the {project_name} context.
+            A list of all sources used, specifying the document name and page number(s) (e.g., "Proposal, p. 4"). If multiple documents are referenced, list them all.
+            At the end of the response, include a "Sources" section. In this section, list only the unique page numbers referenced from the proposal.
+            Sort them in ascending order and group consecutive or nearby pages (within 2-3 pages apart) into ranges.
+
+            Format your response in JSON format and user Markdown formatting for the texts.
+            Here an example of what you have to answer:
+            {{
+            'answer': 'Your detailed answer here',
+            'sources': [
+                {{'document_name': 'Call', 'page_numbers': '9, 10, 12-15'}},
+                {{'document_name': 'Proposal', 'page_numbers': '10-14, 25, 32-34'}},
+                {{'document_name': 'Grant Agreement', 'page_numbers': '1, 18-23'}}
+            ]}}
+        """
+
+        result = self.call_llm(
+            {
+                "project_name": lambda _: project_name,
+                "question": lambda _: user_input,
+            },
+            prompt_template,
+            json_answer=True
+        )
+        return result
 
 
-    def query_project(self, user_input: str, project_name: str) -> Dict[str, str]:
+    def query_projects(self, user_input: str, project_names: List[str]) -> str:
         """Query the project with the given question.
-            Args:
+        
+        Args:
             user_input: The question or query from the user
-            project_name: The name of the project to query
-            Returns:           
+            project_names: The names of the projects to query
+        
+        Returns:           
             str: The answer to the user's question based on the project documents"""
 
         self.logger.info("Processing user query")
         self.logger.debug("Raw input: %s", user_input)
 
-        self.logger.info("Gate check passed, proceeding with event processing")
-        query_result = self.run_rag(project_name, user_input, self.memory)
-        query_result["project_name"] = project_name
-        return query_result
+        query_results = {}
+        sources = {}
+
+        for project_name in [p[0] for p in project_names]:
+            self.logger.info("Processing project: %s", project_name)
+
+            generated_query = self.generate_query_per_project(user_input, project_name)
+            for source in generated_query['sources']:
+                sources[project_name + " " + source['document_name']] = source['page_numbers']
+                
+            prompt_template = generated_query['answer'] + """
+            
+                Format your response in JSON format and user Markdown formatting for the texts.
+                Here an example of what you have to answer:
+                {{
+                'answer': 'Your answer here',
+                }}"""
+
+            result = self.run_rag(project_name, prompt_template, user_input)
+            query_results[project_name] = result["answer"]
+
+        self.logger.info("Obtained query results for all projects")
+
+        prompt = """You are a helpful assistant that generates a query based on a user input.
+            You will be asked to provide an answer comparing information from multiple projects.
+                        
+            Answer the following question based on the information provided from multiple projects:
+            {question}
+
+            You have to answer the question based on the information provided by the following projects:
+            {projects}
+
+            The information from each project is provided below:
+            {projects_info}
+
+            Provide a clear, concise answer that synthesizes the information from all projects.
+            If there are conflicting pieces of information, explain the differences and provide a balanced view.
+
+            Format your response in JSON format and user Markdown formatting for the texts.
+            Here an example of what you have to answer:
+            {{
+            'answer': 'Your answer here',
+            }}
+        """
+
+        result = self.call_llm(
+            {
+                "projects": lambda _: ', '.join(query_results.keys()),
+                "projects_info": lambda _: ', '.join([str(result) for result in query_results.items()]),
+                "question": lambda _: user_input
+            },
+            prompt,
+            json_answer=True
+        )
+
+        result['sources'] = sources
+        return result

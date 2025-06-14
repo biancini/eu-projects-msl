@@ -9,7 +9,7 @@ description     = "RAG utilities for analysing EU project PDFs"
 authors         = [{name = "Andrea Biancini", email = "andrea.biancin@gmail.com"}]
 license         = {text = "MIT"}
 readme          = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.8"
 dependencies    = [
   "python-dotenv>=1.0",
   "pydantic>=2.7",

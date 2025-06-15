@@ -9,12 +9,13 @@ from dotenv import load_dotenv
 
 from pydantic import BaseModel
 
-from langchain.schema import HumanMessage
+from langchain.schema import HumanMessage, AIMessage
 from langchain.prompts import ChatPromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.schema.runnable import RunnableLambda
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from .data_models import PROJECT_LIST
 from .file_reader import FileReader
@@ -34,8 +35,16 @@ class RAGChain():
         load_dotenv(override=True)
         self.memory = ConversationBufferMemory(return_messages=True)
 
-        self.model = os.getenv('MODEL')
-        self.llm = ChatOpenAI(model_name=self.model, temperature=0)
+        llm_provider = os.getenv('LLM_PROVIDER', 'google')
+
+        self.model = os.getenv(f'{llm_provider.upper()}_MODEL')
+
+        if llm_provider == 'openai':
+            self.llm = ChatOpenAI(model_name=self.model, temperature=0)
+        elif llm_provider == 'google':
+            self.llm = ChatGoogleGenerativeAI(model=self.model, temperature=0.0,)
+        else:
+            raise ValueError(f"Unsupported LLM provider: {llm_provider}. Supported providers are 'openai' and 'google'.")
         self.logger.info("Using model: %s", self.model)
 
 
@@ -88,11 +97,11 @@ class RAGChain():
         Returns:
             BaseModel: The response from the LLM, formatted as specified by response_type
         """
-        
+
         parser = PydanticOutputParser(pydantic_object=response_type)
         prompt = ChatPromptTemplate.from_template(prompt_template)
         prompt = prompt.partial(format_instructions=parser.get_format_instructions())
-        
+
         self.logger.info("Send call to LLM")
         rag_chain = rag_params | prompt | self.llm | parser
         result = rag_chain.invoke("")
@@ -171,8 +180,8 @@ class RAGChain():
 
         if memory:
             self.logger.info("Adding user question and AI response to memory")
-            self.memory.chat_memory.add_user_message(question)
-            self.memory.chat_memory.add_ai_message(result.answer)
+            self.memory.chat_memory.add_message(HumanMessage(content=question))
+            self.memory.chat_memory.add_message(AIMessage(content=result.answer))
 
         return result
 
@@ -285,7 +294,9 @@ class RAGChain():
 
             Please provide:
             A clear answer in Markdown formatting.
-            A list of all sources used, specifying the document name and page number(s) (e.g., "Proposal, p. 4"). If multiple documents are referenced, list them all.
+            A list of all sources used, specifying the document name and page number(s) (e.g., "Proposal, p. 4, 5-10").
+            List each document name only once, even if multiple pages are referenced and group them together.
+            If multiple documents are referenced, list them all.
             At the end of the response, include a "Sources" section. In this section, list only the unique page numbers referenced from the proposal.
             Sort them in ascending order and group consecutive or nearby pages (within 2-3 pages apart) into ranges.
 

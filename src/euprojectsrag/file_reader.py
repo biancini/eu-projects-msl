@@ -1,17 +1,17 @@
 """Module for processing and managing EU project documents and data."""
 
-import os
 import logging
+import os
 
 from typing import List, Dict
 import fitz
-from openai import OpenAI
 from chromadb import PersistentClient
 
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from .configurations import ProjetFileData
 
@@ -25,8 +25,15 @@ class FileReader():
         logging.getLogger("pdfminer").setLevel(logging.ERROR)
         self.logger = logging.getLogger(__name__)
 
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.croma_db_path = "./chroma_db"
+
+        llm_provider = os.getenv('LLM_PROVIDER', 'google')
+        if llm_provider == 'openai':
+            self.embedding = OpenAIEmbeddings()
+        elif llm_provider == 'google':
+            self.embedding = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+        else:
+            raise ValueError(f"Unsupported LLM provider: {llm_provider}. Supported providers are 'openai' and 'google'.")        
 
     def extract_text_by_page(self, pdf_path):
         """Extract text from each page of a PDF file.
@@ -169,7 +176,7 @@ class FileReader():
             return Chroma(
                 collection_name=col_name,
                 persist_directory="./chroma_db",
-                embedding_function=OpenAIEmbeddings(),
+                embedding_function=self.embedding,
             )
 
         self.logger.info("Collection %s does not exist, creating it", col_name)
@@ -179,7 +186,7 @@ class FileReader():
         return Chroma.from_documents(collection_name=col_name,
                                     persist_directory="./chroma_db",
                                     documents=split_docs,
-                                    embedding=OpenAIEmbeddings(),
+                                    embedding=self.embedding,
         )
 
 

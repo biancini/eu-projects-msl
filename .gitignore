@@ -104,4 +104,4 @@ temp/
 qdrant_data/
 
 # Exclide Chroma database
-chroma_db/
+chroma_db*/

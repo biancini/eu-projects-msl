@@ -138,7 +138,7 @@ def main():
         # Clear conversation
         if st.button("Clear Conversation"):
             st.session_state.messages = []
-            st.session_state.conversation_memory.clear()
+            st.session_state.rag_chain = RAGChain()
             st.rerun()
 
     chat_container = st.container()

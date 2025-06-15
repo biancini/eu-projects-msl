@@ -28,10 +28,13 @@ class FileReader():
         self.croma_db_path = "./chroma_db"
 
         llm_provider = os.getenv('LLM_PROVIDER', 'google')
+
+        embedding_model = os.getenv(f'{llm_provider.upper()}_EMBEDDING_MODEL')
+        
         if llm_provider == 'openai':
-            self.embedding = OpenAIEmbeddings()
+            self.embedding = OpenAIEmbeddings(model=embedding_model)
         elif llm_provider == 'google':
-            self.embedding = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+            self.embedding = GoogleGenerativeAIEmbeddings(model=embedding_model)
         else:
             raise ValueError(f"Unsupported LLM provider: {llm_provider}. Supported providers are 'openai' and 'google'.")        
 

@@ -110,7 +110,7 @@ class RAGChain():
     def run_rag(
             self,
             project_name: str,
-            prompt_template: str,
+            prompt: str,
             question: str,
             memory: bool = False) -> str:
         """Run RAG chain to answer questions about EU project documents.
@@ -168,7 +168,7 @@ class RAGChain():
         self.logger.info("Invoke RAG chain")
         result = self.call_llm(
             rag_params,
-            prompt_template,
+            prompt,
             response_type=LLMAnswerWithSources,
         )
 

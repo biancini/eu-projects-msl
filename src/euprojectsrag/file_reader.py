@@ -30,7 +30,7 @@ class FileReader():
         llm_provider = os.getenv('LLM_PROVIDER', 'google')
 
         embedding_model = os.getenv(f'{llm_provider.upper()}_EMBEDDING_MODEL')
-        
+
         if llm_provider == 'openai':
             self.embedding = OpenAIEmbeddings(model=embedding_model)
         elif llm_provider == 'google':

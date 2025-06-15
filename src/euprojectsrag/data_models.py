@@ -5,7 +5,7 @@ from typing import Literal, List
 from pydantic import BaseModel, Field
 
 PROJECT_LIST = [
-    "SPECTRO", "EMAI4EU", "RESCHIP4EU", "ACHIEVE",
+    "SPECTRO", "EMAI4EU", "RESCHIP4EU", "ACHIEVE", "ARISE",
 ]
 
 
@@ -29,7 +29,7 @@ class LLMAnswerWithSources(LLMBasicAnswer):
 class ProjectExtraction(BaseModel):
     """Data model for extracting project-related information from user queries."""
 
-    project_names: List[Literal["SPECTRO", "EMAI4EU", "RESCHIP4EU", "ACHIEVE"]] = Field(
+    project_names: List[Literal[*PROJECT_LIST]] = Field(
         description="Name of the project the user is asking about"
     )
 

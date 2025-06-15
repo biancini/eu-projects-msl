@@ -43,6 +43,15 @@ achieve_conf = ProjetFileData(
     ga_file="Agreements/Grant Agreement - GAP-101190015.pdf"
 )
 
+arise_conf = ProjetFileData(
+    project_name="ARISE",
+    start_date="2025-07-01",
+    base_path=f"{BASEPATH}/Projects/ARISE/",
+    call_file="545_call-fiche_digital-2024-advanced-digital-07-keycapacity_en.pdf",
+    proposal_file="ARISE_Proposal.pdf",
+    ga_file="Agreements/Grant Agreement - GAP-101225600.pdf"
+)
+
 def get_project_conf(project_name: str) -> ProjetFileData:
     """Get the configuration for a project."""
     if project_name == "SPECTRO":
@@ -53,5 +62,7 @@ def get_project_conf(project_name: str) -> ProjetFileData:
         return reschip4eu_conf
     if project_name == "ACHIEVE":
         return achieve_conf
+    if project_name == "ARISE":
+        return arise_conf
 
     raise ValueError(f"Project {project_name} not found")

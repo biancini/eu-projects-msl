@@ -19,8 +19,8 @@ class PromptsGenerator:
         """
 
         return ChatPromptTemplate.from_template("""
-            You are a helpful assistant that generates multiple search queries based on a single input query. \n
-            Generate multiple search queries related to: {question} \n
+            You are a helpful assistant that generates multiple search queries based on a single input query.
+            Generate multiple search queries related to: {question}
             Output (4 queries):
         """)
 
@@ -116,7 +116,8 @@ class PromptsGenerator:
 
             Please provide:
             The generated prompt query, and must be specific, concise, and limited to the {project_name} context.
-            A list of all sources used, specifying the document name and page number(s) (e.g., "Proposal, p. 4"). If multiple documents are referenced, list them all.
+            A list of all sources used, specifying the document name and page number(s) (e.g., "Proposal, p. 4, 7-10").
+            If multiple documents are referenced, list them all. Group all pages from the same document together.
             At the end of the response, include a "Sources" section. In this section, list only the unique page numbers referenced from the proposal.
             Sort them in ascending order and group consecutive or nearby pages (within 2-3 pages apart) into ranges.
 

@@ -110,11 +110,8 @@ def main():
                 ga_file = st.file_uploader(
                     "Grant Agreement PDF document path", type="pdf", accept_multiple_files=False)
 
-
-            if st.button("Create Project") and \
-                new_collection and start_date and \
-                call_file and proposal_file and ga_file:
-
+            form_ok = new_collection and start_date and call_file and proposal_file and ga_file
+            if st.button("Create Project") and form_ok:
                 project_conf = ProjetFileData(
                     project_name=new_collection,
                     start_date=start_date.format("%Y-%m-%d"),
@@ -167,7 +164,7 @@ def main():
                     response = st.session_state.rag_chain.query_project(prompt, project_names[0][0])
                 else:
                     response = st.session_state.rag_chain.query_projects(prompt, project_names)
-            
+
             with st.chat_message("assistant"):
                 write_answer(response)
 

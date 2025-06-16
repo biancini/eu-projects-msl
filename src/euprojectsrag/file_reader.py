@@ -36,7 +36,7 @@ class FileReader():
         elif llm_provider == 'google':
             self.embedding = GoogleGenerativeAIEmbeddings(model=embedding_model)
         else:
-            raise ValueError(f"Unsupported LLM provider: {llm_provider}. Supported providers are 'openai' and 'google'.")        
+            raise ValueError(f"Unsupported LLM provider: {llm_provider}. Supported providers are 'openai' and 'google'.")
 
     def extract_text_by_page(self, pdf_path):
         """Extract text from each page of a PDF file.

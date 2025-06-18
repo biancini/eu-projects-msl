@@ -9,5 +9,12 @@ from euprojectsrag.rag_chain import RAGChain
 if __name__ == "__main__":
     rag_chain = RAGChain()
     question = input(colored("Enter the question you want to ask to the project:\n", "green"))
-    asnwer = rag_chain.query_project(question)
-    print(colored(asnwer, "green"))
+    project_names =rag_chain.project_name_extraction(question)
+    if len(project_names) == 0:
+        answer = "No project found for the given prompt."
+    elif len(project_names) == 1:
+        answer = rag_chain.query_project(question, project_names[0][0])
+    else:
+        answer = rag_chain.query_projects(question, project_names)
+
+    print(colored(answer, "green"))

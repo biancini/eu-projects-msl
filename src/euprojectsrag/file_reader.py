@@ -4,11 +4,12 @@ import logging
 import os
 
 from typing import List, Dict
-import fitz
 from chromadb import PersistentClient
 
+from docling.document_converter import DocumentConverter
+from docling.chunking import HybridChunker
+
 from langchain.schema import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -22,10 +23,13 @@ class FileReader():
     retrieval and analysis."""
 
     def __init__(self):
-        logging.getLogger("pdfminer").setLevel(logging.ERROR)
+
         self.logger = logging.getLogger(__name__)
 
         self.croma_db_path = "./chroma_db"
+
+        self.converter = DocumentConverter()
+        self.chunker = HybridChunker(merge_peers=True)
 
         llm_provider = os.getenv('LLM_PROVIDER', 'google')
 
@@ -38,45 +42,12 @@ class FileReader():
         else:
             raise ValueError(f"Unsupported LLM provider: {llm_provider}. Supported providers are 'openai' and 'google'.")
 
-    def extract_text_by_page(self, pdf_path):
-        """Extract text from each page of a PDF file.
-            Args:
-            fi
-            pdf_path: Path to the PDF file
-        Returns:
-            List of strings, where each string contains the text from one page"""
-
-        self.logger.info("Extracting text from PDF file %s", pdf_path)
-
-        doc = fitz.open(pdf_path)
-        pages = [page.get_text() for page in doc]
-
-        self.logger.debug("Extracted %d pages from PDF", len(pages))
-        return pages
-
-    def read_pdf_pages(self, filename: str) -> List[str]:
-        """Extract text from all pages of a PDF file.
-        
-        Args:
-            filename: Path to the PDF file
-            
-        Returns:
-            List of strings, where each string contains the text from one page
-        """
-        self.logger.info("Reading PDF pages for file %s", filename)
-
-        doc = fitz.open(filename)
-        pages = [page.get_text() for page in doc]
-
-        self.logger.debug("Read %d pages", len(pages))
-        return pages
-
 
     def get_documents_from_pdf(
             self,
             file_name: str,
             doc_type: str,
-            project_name: str) -> List[Document]:
+            project_name: str) -> Dict:
         """Get documents from a PDF file.
 
         Args:
@@ -87,23 +58,15 @@ class FileReader():
         Returns:
             List of documents
         """
-        page_texts = self.read_pdf_pages(file_name)
+        result = self.converter.convert(file_name)
+        self.logger.info("Read document %s", file_name)
+        documnent = {
+            "document": result.document,
+            "doc_type": doc_type,
+            "project_name": project_name,
+        }
 
-        documents = [
-            Document(
-                id=hash(page_texts[i]),
-                page_content=page_texts[i],
-                metadata={
-                    "doc_type": doc_type,
-                    "page_number": i + 1,
-                    "project_name": project_name,
-                }
-            )
-            for i in range(len(page_texts))
-        ]
-
-        self.logger.info("Extracted %d documents from %s", len(documents), file_name)
-        return documents
+        return documnent
 
     def get_collection_names(self) -> Dict[str, int]:
         """Get the names of all collections in the Chroma database.
@@ -151,9 +114,37 @@ class FileReader():
         )
 
         self.logger.info("Splitting documents")
-        documents = call_docs + proposal_docs + ga_docs
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-        return splitter.split_documents(documents)
+        all_documents = [ call_docs, proposal_docs, ga_docs ]
+
+        all_chunks = []
+        for doc in all_documents:
+            for chunk in self.chunker.chunk(doc["document"]):
+                all_chunks.append({
+                    "text": chunk.text,
+                    "metadata": {
+                        "source": chunk.meta.origin.filename,
+                        "doc_type": doc['doc_type'],
+                        "project_name": doc['project_name'],
+                        "page_numbers": ', '.join([
+                            str(page_no)
+                            for page_no in sorted(
+                                set(
+                                    prov.page_no
+                                    for item in chunk.meta.doc_items
+                                    for prov in item.prov
+                                )
+                            )
+                        ])
+                        or None,
+                        "title": chunk.meta.headings[0] if chunk.meta.headings else None,
+                    },
+                })
+
+        documents: List[Document] = [
+            Document(page_content=cur_chunk['text'], metadata=cur_chunk['metadata'])
+            for cur_chunk in all_chunks
+        ]
+        return documents
 
 
     def get_chroma_db(self, project_conf: ProjetFileData) -> Chroma:

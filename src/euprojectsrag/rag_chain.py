@@ -9,7 +9,6 @@ from pydantic import BaseModel
 
 from langchain.schema import HumanMessage, AIMessage
 from langchain.prompts import ChatPromptTemplate
-from langchain.memory import ConversationBufferMemory
 from langchain.schema.runnable import RunnableLambda
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from langchain_openai import ChatOpenAI
@@ -32,7 +31,6 @@ class RAGChain():
         self.pdf_reader = FileReader()
 
         load_dotenv(override=True)
-        self.memory = ConversationBufferMemory(return_messages=True)
 
         llm_provider = os.getenv('LLM_PROVIDER', 'google')
 
@@ -112,7 +110,7 @@ class RAGChain():
             project_name: str,
             prompt: str,
             question: str,
-            memory: bool = False) -> str:
+            memory: List) -> str:
         """Run RAG chain to answer questions about EU project documents.
         
         Args:
@@ -162,8 +160,8 @@ class RAGChain():
             "context_project_docs": retrieval_chain_rag,
             "question": lambda _: question
         }
-        if memory:
-            rag_params["history"] = RunnableLambda(lambda _: self.memory.buffer)
+        if memory and len(memory) > 0:
+            rag_params["history"] = RunnableLambda(lambda _: [msg["content"] for msg in memory if msg["role"] == "user"])
 
         self.logger.info("Invoke RAG chain")
         result = self.call_llm(
@@ -172,15 +170,10 @@ class RAGChain():
             response_type=LLMAnswerWithSources,
         )
 
-        if memory:
-            self.logger.info("Adding user question and AI response to memory")
-            self.memory.chat_memory.add_message(HumanMessage(content=question))
-            self.memory.chat_memory.add_message(AIMessage(content=result.answer))
-
         return result
 
 
-    def project_name_extraction(self, user_input: str) -> List[Tuple[str, float]]:
+    def project_name_extraction(self, messages: List) -> List[Tuple[str, float]]:
         """LLM call to determine which project the user is asking about.
         Args:
             user_input: The question or query from the user
@@ -188,15 +181,16 @@ class RAGChain():
             str: The list of project names extracted from the user input
         """
 
+        user_input = messages[-1]["content"]
+
         self.logger.info("Starting event extraction analysis")
         self.logger.debug("Input text: %s", user_input)
 
         human_messages = [
-            msg.content
-            for msg in self.memory.chat_memory.messages
-            if isinstance(msg, HumanMessage)
+            msg["content"]
+            for msg in messages
+            if msg["role"] == "user"
         ]
-        human_messages.append(user_input)
 
         prompt = PromptsGenerator.get_projects_names_prompt()
 
@@ -246,7 +240,7 @@ class RAGChain():
         return project_name
 
 
-    def query_project(self, user_input: str, project_name: str) -> Dict[str, str]:
+    def query_project(self, messages: List, project_name: str) -> Dict[str, str]:
         """Query the project with the given question.
 
         Args:
@@ -255,6 +249,8 @@ class RAGChain():
         
         Returns:           
             str: The answer to the user's question based on the project documents"""
+        
+        user_input = messages[-1]["content"]
 
         self.logger.info("Processing user query")
         self.logger.debug("Raw input: %s", user_input)
@@ -262,7 +258,7 @@ class RAGChain():
         prompt = PromptsGenerator.get_projects_details_prompt()
 
         self.logger.info("Gate check passed, proceeding with event processing")
-        query_result = self.run_rag(project_name, prompt, user_input, True)
+        query_result = self.run_rag(project_name, prompt, user_input, messages)
         query_result.sources = [
             {
                 'document_name': project_name + " " + source['document_name'],
@@ -298,7 +294,7 @@ class RAGChain():
         return result
 
 
-    def query_projects(self, user_input: str, project_names: List[str]) -> str:
+    def query_projects(self, messages: List, project_names: List[str]) -> str:
         """Query the project with the given question.
         
         Args:
@@ -307,6 +303,8 @@ class RAGChain():
         
         Returns:           
             str: The answer to the user's question based on the project documents"""
+
+        user_input = messages[-1]["content"]
 
         self.logger.info("Processing user query")
         self.logger.debug("Raw input: %s", user_input)
@@ -324,10 +322,10 @@ class RAGChain():
                     'page_numbers': source['page_numbers']
                 })
 
-            prompt_template = generated_query.answer + """
+            prompt_template = ChatPromptTemplate.from_template(generated_query.answer + """
 
                 Output format:
-                {format_instructions}"""
+                {format_instructions}""")
 
             result = self.run_rag(project_name, prompt_template, user_input)
             query_results[project_name] = result.answer

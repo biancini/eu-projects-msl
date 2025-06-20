@@ -97,34 +97,6 @@ def main():
 
         st.divider()
 
-        # New collection
-        with st.expander("Create New Project", expanded=False):
-            new_collection = st.text_input("Project name")
-            start_date = st.date_input("Start date")
-
-            with st.container():
-                call_file = st.file_uploader(
-                    "Call PDF document path", type="pdf", accept_multiple_files=False)
-                proposal_file = st.file_uploader(
-                    "Proposal PDF document path", type="pdf", accept_multiple_files=False)
-                ga_file = st.file_uploader(
-                    "Grant Agreement PDF document path", type="pdf", accept_multiple_files=False)
-
-            form_ok = new_collection and start_date and call_file and proposal_file and ga_file
-            if st.button("Create Project") and form_ok:
-                project_conf = ProjetFileData(
-                    project_name=new_collection,
-                    start_date=start_date.format("%Y-%m-%d"),
-                    base_path="",
-                    call_file=call_file.path,
-                    proposal_file=proposal_file.path,
-                    ga_file=ga_file.path,
-                )
-
-                st.session_state.reader.read_project_files(project_conf)
-
-        st.divider()
-
         # Collection info
         if st.session_state.current_collection:
             doc_count = collections[st.session_state.current_collection] \
@@ -155,15 +127,15 @@ def main():
             st.session_state.messages.append({"role": "user", "content": prompt})
 
             if selected_collection != "all":
-                response = st.session_state.rag_chain.query_project(prompt, selected_collection)
+                response = st.session_state.rag_chain.query_project(st.session_state.messages, selected_collection)
             else:
-                project_names = st.session_state.rag_chain.project_name_extraction(prompt)
+                project_names = st.session_state.rag_chain.project_name_extraction(st.session_state.messages)
                 if len(project_names) == 0:
                     response = "No project found for the given prompt."
                 elif len(project_names) == 1:
-                    response = st.session_state.rag_chain.query_project(prompt, project_names[0][0])
+                    response = st.session_state.rag_chain.query_project(st.session_state.messages, project_names[0][0])
                 else:
-                    response = st.session_state.rag_chain.query_projects(prompt, project_names)
+                    response = st.session_state.rag_chain.query_projects(st.session_state.messages, project_names)
 
             with st.chat_message("assistant"):
                 write_answer(response)

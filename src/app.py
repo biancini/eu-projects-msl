@@ -8,7 +8,7 @@ import streamlit as st
 
 from euprojectsrag.rag_chain import RAGChain
 from euprojectsrag.file_reader import FileReader
-from euprojectsrag.configurations import ProjetFileData, get_project_conf
+from euprojectsrag.configurations import get_project_conf
 from euprojectsrag.data_models import PROJECT_LIST, LLMBasicAnswer, LLMAnswerWithSources
 
 st.set_page_config(
@@ -126,16 +126,17 @@ def main():
             st.chat_message("user").markdown(prompt)
             st.session_state.messages.append({"role": "user", "content": prompt})
 
+            rag_chain = st.session_state.rag_chain
             if selected_collection != "all":
-                response = st.session_state.rag_chain.query_project(st.session_state.messages, selected_collection)
+                response = rag_chain.query_project(st.session_state.messages, selected_collection)
             else:
-                project_names = st.session_state.rag_chain.project_name_extraction(st.session_state.messages)
+                project_names = rag_chain.project_name_extraction(st.session_state.messages)
                 if len(project_names) == 0:
                     response = "No project found for the given prompt."
                 elif len(project_names) == 1:
-                    response = st.session_state.rag_chain.query_project(st.session_state.messages, project_names[0][0])
+                    response = rag_chain.query_project(st.session_state.messages, project_names[0][0])
                 else:
-                    response = st.session_state.rag_chain.query_projects(st.session_state.messages, project_names)
+                    response = rag_chain.query_projects(st.session_state.messages, project_names)
 
             with st.chat_message("assistant"):
                 write_answer(response)

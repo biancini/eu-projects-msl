@@ -79,8 +79,8 @@ class FileReader():
 
         collections = {}
         for coll in coll_names:
-            doc_count = croma_db_client.get_collection(coll).count()
-            collections[coll] = doc_count
+            doc_count = croma_db_client.get_collection(coll.name).count()
+            collections[coll.name] = doc_count
 
         return collections
 
@@ -165,7 +165,7 @@ class FileReader():
 
         col_name = project_conf.project_name
 
-        if col_name in collections:
+        if col_name in [col.name for col in collections]:
             self.logger.info("Collection %s already exists", col_name)
             return Chroma(
                 collection_name=col_name,

@@ -7,7 +7,6 @@ from typing import List, Dict, Tuple, Type
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
-from langchain.schema import HumanMessage, AIMessage
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.runnable import RunnableLambda
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser

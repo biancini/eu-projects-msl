@@ -95,6 +95,14 @@ def main():
         if selected_collection != st.session_state.current_collection:
             st.session_state.current_collection = selected_collection
 
+        # Clear conversation
+        if st.button("Load Documents"):
+            project_name = st.session_state.current_collection
+            if project_name != "all":
+                project_conf = get_project_conf(project_name)
+                st.session_state.reader.get_chroma_db(project_conf)
+                st.rerun()
+
         st.divider()
 
         # Collection info

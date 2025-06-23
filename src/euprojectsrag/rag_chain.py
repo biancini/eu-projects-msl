@@ -109,7 +109,7 @@ class RAGChain():
             project_name: str,
             prompt: str,
             question: str,
-            memory: List) -> str:
+            memory: List = None) -> str:
         """Run RAG chain to answer questions about EU project documents.
         
         Args:

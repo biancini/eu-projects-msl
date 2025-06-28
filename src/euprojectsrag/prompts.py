@@ -68,6 +68,7 @@ class PromptsGenerator:
             - Project Documents: {context_project_docs}
 
             Based on the information above, please answer the following question as accurately and thoroughly as possible.
+            Answer by searching information in the Grant Agreement and if you can'f find the information there, search in the other documents.
             If the information is not available in the context, say so explicitly but try to answer the question, if generic enough, based on the information available.
 
             Question: {question}
